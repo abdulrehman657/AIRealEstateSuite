@@ -1,0 +1,4531 @@
+{
+  "name": "RealEstate AI Suite",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "57e93849-884f-4a4c-bf0c-eed9a7f3d04f",
+              "name": "Summary",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -14992,
+        -1088
+      ],
+      "id": "b09b5d0e-85f0-4281-9156-66a6fe914137",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => ({\n  json: {\n    ...item.json,\n    safeText: (item.json.Summary || \"\").replace(/\\r?\\n+/g, \" \").trim()\n  }\n}));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -14768,
+        -1088
+      ],
+      "id": "3b80d2c3-afbd-4396-8bb0-fd15cf2a3b3d",
+      "name": "Clean Text"
+    },
+    {
+      "parameters": {
+        "jsCode": "for (let i = 0; i < items.length; i++) {\n    const uniqueId = Date.now().toString() + '_' + Math.floor(Math.random() * 1000000);\n\n    items[i].json.fileId = uniqueId;\n\n    // Fix: use correct binary key name\n    const binaryKey = Object.keys(items[i].binary || {})[0];  // auto-detect key safely\n\n    const originalName =\n        items[i].binary?.[binaryKey]?.fileName || 'uploaded.pdf';\n\n    items[i].json.fileName = `${uniqueId}_${originalName}`;\n}\n\nreturn items;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -15664,
+        -992
+      ],
+      "id": "084e7959-4916-4ae3-a2ed-159aab795d92",
+      "name": "File ID Generator"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Function node: deep-copy binary from SOURCE_KEY to for_storage\nconst SOURCE_KEY = 'file'; // your binary property name\n\nfor (let i = 0; i < items.length; i++) {\n    const item = items[i];\n    if (!item.binary || !item.binary[SOURCE_KEY]) {\n        // nothing to copy\n        continue;\n    }\n\n    const orig = item.binary[SOURCE_KEY];\n\n    // orig.data might be a Buffer or a base64 string; handle both.\n    let bufferData;\n    if (Buffer.isBuffer(orig.data)) {\n        bufferData = Buffer.from(orig.data); // copy buffer\n    } else if (typeof orig.data === 'string') {\n        bufferData = Buffer.from(orig.data, 'base64');\n    } else {\n        // try to coerce\n        bufferData = Buffer.from(orig.data);\n    }\n\n    // Build a standalone binary object copy\n    item.binary = item.binary || {};\n    item.binary['for_storage'] = {\n        fileName: orig.fileName || (SOURCE_KEY + '.pdf'),\n        mimeType: orig.mimeType || 'application/pdf',\n        data: bufferData\n    };\n\n    // original PDF remains untouched in item.binary[PDF]\n}\n\nreturn items;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -15440,
+        -992
+      ],
+      "id": "bf497b75-9cd3-448a-b1de-449157c08141",
+      "name": "Multiple Binary Data"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://adfyaqvjhronondiyede.supabase.co/storage/v1/object/Raw PDFs/{{ $('File ID Generator').item.json.fileName }}\n\n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "authorization",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkZnlhcXZqaHJvbm9uZGl5ZWRlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NDE1OTYxNSwiZXhwIjoyMDc5NzM1NjE1fQ.Qwv1KCfE46VWy9p_Cjy3LSX42naONMc8SDoCqftgFdE"
+            },
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkZnlhcXZqaHJvbm9uZGl5ZWRlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NDE1OTYxNSwiZXhwIjoyMDc5NzM1NjE1fQ.Qwv1KCfE46VWy9p_Cjy3LSX42naONMc8SDoCqftgFdE"
+            },
+            {
+              "name": "content-type",
+              "value": "application/pdf"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "file",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -15216,
+        -896
+      ],
+      "id": "ef9e7661-d1b9-4e69-8bfd-8e689e21432b",
+      "name": "PDF Stored In SupaBase"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "=file",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -15216,
+        -1088
+      ],
+      "id": "7d884abd-48b2-4993-b185-37d8e37f562d",
+      "name": "Extract from PDF (RAW)"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert commercial lease summarizer.\n\nYour task:\n• Read the lease JSON\n• Generate a clean, professional plain-text lease abstract\n• No markdown\n• No HTML\n• No special characters (no #, *, |, <, >, /, _, emojis, etc.)\n• No bold or italic syntaxes\n• No tables (use label: value format)\n• Must be safe to store in Supabase text fields\n• Must look like a clean formatted report with sections\n\nFormatting Rules:\n\nSection titles must be ALL CAPS\n\nAdd one blank line after each section title\n\nItems use “Label: Value”\n\nFor multiple items, use bullet list with \"• \"\n\nIf data is empty or \"Not Available\", output: Not specified\n\nStructure:\nLEASE ABSTRACT\nGENERAL INFORMATION\nLEASE TERM\nFINANCIALS\nCRITICAL DATES\nRENEWAL AND EXTENSION\nTERMINATION AND DEFAULT\nUSE AND RESTRICTIONS\nCONTACT INFORMATION\nSPECIAL CLAUSES\nATTACHMENTS\n\nLease JSON Input:\n{{ $json.FULL_JSON }}\n\nOutput only the final plain-text lease summary.\nNo explanations.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -11920,
+        -1088
+      ],
+      "id": "90074d51-37f3-426e-9d46-5ecaf10880b9",
+      "name": "SUMMARY"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert commercial lease abstractor. Read the provided Lease Text and extract every relevant detail into EXACTLY the JSON schema described below. Use the precise key names and types; do NOT add or remove keys. All output must be valid JSON and nothing else.\n\n===========================\n REQUIRED JSON STRUCTURE\n===========================\n\n{\n  \"generalInformation\": {\n    \"tenantName\": \"\",\n    \"landlordName\": \"\",\n    \"premisesAddress\": \"\",\n    \"leaseDate\": \"\"\n  },\n  \"leaseTerm\": {\n    \"startDate\": \"\",\n    \"endDate\": \"\",\n    \"totalTermInMonths\": 0,\n    \"earlyTerminationClause\": false,\n    \"earlyTerminationDetails\": \"\"\n  },\n  \"financials\": {\n    \"baseRent\": [],\n    \"securityDeposit\": 0,\n    \"CAMCharges\": \"\",\n    \"taxesOrInsurance\": \"\",\n    \"escalationClauses\": []\n  },\n  \"renewalOptions\": [],\n  \"terminationDefault\": {\n    \"terminationNoticeDays\": 0,\n    \"defaultClauses\": \"\",\n    \"penaltiesOrFees\": \"\"\n  },\n  \"useRestrictions\": {\n    \"permittedUse\": \"\",\n    \"prohibitedUse\": \"\",\n    \"exclusiveRights\": [],\n    \"sublettingAllowed\": false\n  },\n  \"criticalDates\": {\n    \"rentDueDates\": [],\n    \"escalationDates\": [],\n    \"renewalNoticeDates\": [],\n    \"terminationNoticeDates\": [],\n    \"otherImportantDates\": []\n  },\n  \"contactInformation\": {\n    \"landlordContact\": \"\",\n    \"propertyManagerContact\": \"\",\n    \"tenantContact\": \"\"\n  },\n  \"miscellaneous\": {\n    \"insuranceRequirements\": \"\",\n    \"specialClauses\": [],\n    \"attachmentsReferenced\": []\n  },\n  \"meta\": {\n    \"confidenceScore\": 0,\n    \"pageReferences\": [],\n    \"extractionNotes\": []\n  }\n}\n\n===========================\n FIELD RULES\n===========================\n\nStep 1 — Use EXACT field names shown above.\n\nStep 2 — Apply these defaults if missing in the lease:\n- Missing text → \"Not Available\"\n- Missing arrays → []\n- Missing numbers → 0\n- Missing booleans → false\n- Missing dates → \"Not Available\"\n\nStep 3 — Date format: YYYY-MM-DD only.\n\nStep 4 — For booleans:\n- earlyTerminationClause = true if ANY early termination wording exists.\n- sublettingAllowed = true if ANY form of subletting is permitted.\n\nStep 5 — Populate \"meta\" section:\n- confidenceScore (0–100) = How confident you are about the extraction.\n- pageReferences = [\"p1\", \"p2-3\"] if visible; otherwise []\n- extractionNotes = short notes about uncertainty or assumptions.\n\nStep 6 — Output MUST be:\n- One single JSON object\n- No explanation\n- No commentary\n- No markdown formatting\n\n===========================\n LEASE TEXT\n===========================\n\n{{ $json.Summary }}\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -14544,
+        -1088
+      ],
+      "id": "8e08b863-fb3e-4cea-b1db-1ae451af87c7",
+      "name": "JSON"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "abdulrehman657.pk@gmail.com",
+          "mode": "list",
+          "cachedResultName": "abdulrehman657.pk@gmail.com"
+        },
+        "start": "={{ new Date(new Date($json.date).setMonth(new Date($json.date).getMonth() - 1)).toISOString().split('T')[0] }}",
+        "end": "={{ new Date(new Date($json.date).setMonth(new Date($json.date).getMonth() - 1)).toISOString().split('T')[0] }}",
+        "additionalFields": {
+          "allday": "yes",
+          "description": "={{ $('Save Data In Supabase').item.json.File_Name }}\n\n{{ $json.description }} is month away.\n{{ $json.date }}",
+          "summary": "={{ $json.dateType }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        -10192,
+        -896
+      ],
+      "id": "08a758b6-4ed5-4eff-b2b7-c39a7e632eed",
+      "name": "Monthly",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "I3CyIaZiTKHCdhh1",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "abdulrehman657.pk@gmail.com",
+          "mode": "list",
+          "cachedResultName": "abdulrehman657.pk@gmail.com"
+        },
+        "start": "={{ (()=>{const d=new Date($('Dates (Updated)').item.json.date+\"T00:00:00Z\");d.setDate(d.getDate()-7);return d.toISOString().split(\"T\")[0];})() }}",
+        "end": "={{ (()=>{const d=new Date($('Dates (Updated)').item.json.date+\"T00:00:00Z\");d.setDate(d.getDate()-7);return d.toISOString().split(\"T\")[0];})() }}",
+        "additionalFields": {
+          "allday": "yes",
+          "description": "={{ $('Save Data In Supabase').item.json.File_Name }}\n\n{{ $('Dates (Updated)').item.json.description }} is a week away.",
+          "summary": "={{ $('Dates (Updated)').item.json.dateType }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        -9968,
+        -896
+      ],
+      "id": "c5325cc9-b633-499e-875f-852c07d49e15",
+      "name": "Weekly",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "I3CyIaZiTKHCdhh1",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "abdulrehman657.pk@gmail.com",
+          "mode": "list",
+          "cachedResultName": "abdulrehman657.pk@gmail.com"
+        },
+        "start": "={{ (()=>{const d=new Date($('Dates (Updated)').item.json.date+\"T00:00:00Z\");d.setDate(d.getDate()-1);return d.toISOString().split(\"T\")[0];})() }}",
+        "end": "={{ (()=>{const d=new Date($('Dates (Updated)').item.json.date+\"T00:00:00Z\");d.setDate(d.getDate()-1);return d.toISOString().split(\"T\")[0];})() }}",
+        "additionalFields": {
+          "allday": "yes",
+          "description": "={{ $('Save Data In Supabase').item.json.File_Name }}\n\n{{ $('Dates (Updated)').item.json.description }} is a day away.",
+          "summary": "={{ $('Dates (Updated)').item.json.dateType }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        -9744,
+        -896
+      ],
+      "id": "69d99889-e336-4979-a0e9-49db5fd24676",
+      "name": "Last Day",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "I3CyIaZiTKHCdhh1",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Step 1: Get the AI output string\nlet llmOutput = $input.first().json.output;\n\n// Step 2: Initialize\nlet extractedText = \"No data available\";\nlet confidenceScore = 0;\n\n// Step 3: Ensure llmOutput exists\nif (llmOutput) {\n    try {\n        // Remove extra ```json ... ``` if present\n        llmOutput = llmOutput.replace(/^```json\\s*/i, '').replace(/\\s*```$/i, '');\n\n        // Parse JSON string\n        const extractedJson = JSON.parse(llmOutput);\n\n        // Extract confidenceScore safely\n        if (extractedJson?.meta?.confidenceScore && typeof extractedJson.meta.confidenceScore === \"number\") {\n            confidenceScore = extractedJson.meta.confidenceScore;\n        }\n\n        // Flatten JSON into a readable text\n        const lines = [];\n\n        // General Information\n        if (extractedJson.generalInformation) {\n            const gi = extractedJson.generalInformation;\n            lines.push(`Tenant Name: ${gi.tenantName || \"Not Available\"}`);\n            lines.push(`Landlord Name: ${gi.landlordName || \"Not Available\"}`);\n            lines.push(`Premises Address: ${gi.presencesAddress || \"Not Available\"}`);\n            lines.push(`Lease Date: ${gi.leaseDate || \"Not Available\"}`);\n        }\n\n        // Lease Term\n        if (extractedJson.leaseTerm) {\n            const lt = extractedJson.leaseTerm;\n            lines.push(`Lease Start Date: ${lt.startDate || \"Not Available\"}`);\n            lines.push(`Lease End Date: ${lt.endDate || \"Not Available\"}`);\n            lines.push(`Total Term (months): ${lt.totalTermInMonths || 0}`);\n            lines.push(`Early Termination Clause: ${lt.earlyTerminationClause || false}`);\n            lines.push(`Early Termination Details: ${lt.earlyTerminationDetails || \"Not Available\"}`);\n        }\n\n        // Financials\n        if (extractedJson.financials) {\n            const f = extractedJson.financials;\n            lines.push(`Security Deposit: ${f.securityDeposit || 0}`);\n            lines.push(`CAM Charges: ${f.CAMCharges || \"Not Available\"}`);\n            lines.push(`Taxes or Insurance: ${f.taxesOrInsurance || \"Not Available\"}`);\n\n            if (Array.isArray(f.baseRent) && f.baseRent.length > 0) {\n                f.baseRent.forEach((r, i) => {\n                    lines.push(`Base Rent [${i + 1}]: ${r.amount || 0} ${r.currency || \"\"} (${r.frequency || r.period || \"N/A\"})`);\n                });\n            }\n        }\n\n        // Special Clauses\n        if (extractedJson.miscellaneous?.specialClauses) {\n            lines.push(`Special Clauses:`);\n            extractedJson.miscellaneous.specialClauses.forEach((clause, idx) => {\n                lines.push(`  ${idx + 1}. ${clause}`);\n            });\n        }\n\n        // Attachments\n        if (extractedJson.miscellaneous?.attachmentsReferenced) {\n            lines.push(`Attachments: ${extractedJson.miscellaneous.attachmentsReferenced.join(\", \")}`);\n        }\n\n        // Combine into single text\n        extractedText = lines.join(\"\\n\");\n\n    } catch (err) {\n        extractedText = `Error parsing JSON: ${err.message}`;\n        confidenceScore = 0;\n    }\n}\n\n// Step 4: Return as separate fields\nreturn [\n    {\n        json: {\n            extractedText,\n            confidenceScore\n        }\n    }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -14192,
+        -1088
+      ],
+      "id": "a04f69f6-4f12-4769-9200-b014cb75a321",
+      "name": "Confidence Score"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.confidenceScore }}",
+                    "rightValue": 85,
+                    "operator": {
+                      "type": "number",
+                      "operation": "gt"
+                    },
+                    "id": "3480af34-f848-43ed-92ea-2a2d4151fab2"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "36fd616f-14a9-4314-9d5e-618ae4674bb4",
+                    "leftValue": "={{ $json.confidenceScore }}",
+                    "rightValue": 85,
+                    "operator": {
+                      "type": "number",
+                      "operation": "lt"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -13968,
+        -1088
+      ],
+      "id": "ffd96178-0fa9-46d0-96a9-70422795f117",
+      "name": "Confidence Check"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a professional AI lease validator. \n\nCompare the extracted lease JSON with the original lease text. Identify **only a few of the most important missing or incomplete fields**—just enough that a human agent can address them quickly. Do NOT list every missing field. Prioritize fields that are critical or necessary to complete the lease record.\n\nReturn the output as plain text, one missing field per line, in a format that can be copied directly into Slack. Do NOT use JSON, arrays, or technical structure. Do NOT mention categories—just list the fields.\n\nExtracted JSON:\n{{ $('JSON').item.json.output }}\n\nOriginal Lease Text:\n{{ $('Clean Text').item.json.Summary }}\n\nExample output:\n- Tenant Name is missing\n- Security Deposit not found\n- Early Termination Clause details missing\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -13744,
+        -1024
+      ],
+      "id": "26bb440e-c2be-451c-81bb-b809a57da68e",
+      "name": "MISSING FIELDS"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09EHHNMS93",
+          "mode": "list",
+          "cachedResultName": "all-general"
+        },
+        "message": "=Hi {{ $('Multiple Binary Data').item.json.body.agentName }}\n\nOur AI Gave A Confidence Score Under 85%\n\nDo You Still Want To Process:\n\nYes\nNo\n\n(If No Is Selected You Will Be Given A List Of Missing Fields To Be Filled From The AI Extraction To Make The Results Better)",
+        "responseType": "freeText",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        -13392,
+        -1024
+      ],
+      "id": "62204ec9-bece-4250-b007-c95d4f5e3271",
+      "name": "Approval",
+      "webhookId": "fe237a46-5772-4491-8428-4e399eab4eef",
+      "credentials": {
+        "slackApi": {
+          "id": "8kdZB0gOxFj4rHiR",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.data.text }}",
+                    "rightValue": "Yes",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "03a729ea-7c94-4321-b63b-e4244a600487"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "893ac39a-7d82-4ba5-bfca-74bbe0a9618f",
+                    "leftValue": "={{ $json.data.text }}",
+                    "rightValue": "No",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -13168,
+        -1024
+      ],
+      "id": "2a7cb7b1-5dca-405c-af14-2a3d3aecffb6",
+      "name": "Yes Or No"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09EHHNMS93",
+          "mode": "list",
+          "cachedResultName": "all-general"
+        },
+        "message": "=These Are The Missing Fields That You Need To Fill:\n\n{{ $('MISSING FIELDS').item.json.output }}",
+        "responseType": "freeText",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        -12944,
+        -944
+      ],
+      "id": "d477f4f7-5a37-42bd-b621-25503fc6d6a7",
+      "name": "Slack Message About Missing Fields",
+      "webhookId": "28f4d7f8-4cd1-484f-a2c3-365167b16cc0",
+      "credentials": {
+        "slackApi": {
+          "id": "8kdZB0gOxFj4rHiR",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Add The Missing Data In The JSON\n\nJSON:\n{{ $('JSON').item.json.output }}\n\nMissing Data:\n\nMissing Data Fields:\n{{ $('MISSING FIELDS').item.json.output }}\n\nData Fields Answers:\n{{ $json.data.text }}\n\nOutput Just Put The Missing fields in the JSON without changing the original JSON",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -12720,
+        -944
+      ],
+      "id": "ed74dc22-c835-4101-bfad-2606caa4784d",
+      "name": "New JSON"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -12368,
+        -1088
+      ],
+      "id": "5add46f6-7a12-4ca4-9bd6-563ce7321d68",
+      "name": "One Way"
+    },
+    {
+      "parameters": {
+        "tableId": "LeaseAgreementsJSON",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "Field ID",
+              "fieldValue": "={{ $('File ID Generator').item.json.fileName }}"
+            },
+            {
+              "fieldId": "Name",
+              "fieldValue": "={{ $('Multiple Binary Data').item.json.body.agentName }}"
+            },
+            {
+              "fieldId": "Email",
+              "fieldValue": "={{ $('Multiple Binary Data').item.json.body.agentEmail }}"
+            },
+            {
+              "fieldId": "FULL_JSON",
+              "fieldValue": "={{ $('JSON').item.json.output }}"
+            },
+            {
+              "fieldId": "File_Name",
+              "fieldValue": "={{ $('Multiple Binary Data').item.json.body.leaseName }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -12144,
+        -1088
+      ],
+      "id": "1481609f-7462-490b-b914-8fcc79eb1e5b",
+      "name": "Save Data In Supabase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "0yxDbibxL67NqJNS",
+          "name": "Project LeaseLens"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09EHHNMS93",
+          "mode": "list",
+          "cachedResultName": "all-general"
+        },
+        "text": "={{ $json.output }}",
+        "otherOptions": {
+          "mrkdwn": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        -11568,
+        -1088
+      ],
+      "id": "5423bec4-505e-4e72-8c69-9249035d12b6",
+      "name": "Slack Message About Summary",
+      "webhookId": "fd03df0d-4d89-4077-8e03-4e9651175b81",
+      "credentials": {
+        "slackApi": {
+          "id": "8kdZB0gOxFj4rHiR",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "LeaseAgreementsJSON",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Save Data In Supabase').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "PDF Summary",
+              "fieldValue": "={{ $('SUMMARY').item.json.output }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -11280,
+        -1184
+      ],
+      "id": "754e2b6d-4c7b-43f9-b7cd-920d26b0947a",
+      "name": "Summary Saved",
+      "credentials": {
+        "supabaseApi": {
+          "id": "0yxDbibxL67NqJNS",
+          "name": "Project LeaseLens"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert commercial lease summarizer.\n\nYour task is to:\n\nRead the lease JSON\n\nGenerate a clean, professional HTML lease abstract suitable for:\n\nEmail (Gmail, Outlook, etc.)\n\nSupabase storage (as HTML)\n\nEmbedding in web apps\n\nUse only semantic HTML: h1, h2, h3, p, ul, li, table, tr, td\n\nDo NOT include CSS files, external assets, or scripts\n\nInline style is allowed but must be minimal and clean\n\nThe result must look professional when pasted directly into an email\n\nHTML Rules:\n\nUse <h1> for main title\n\nUse <h2> for section headers\n\nUse <p> for text lines\n\nUse <ul><li> for bullet items\n\nUse tables where helpful (rent, dates, financials)\n\nIf any field is missing or “Not Available”, show: Not specified\n\nDo NOT wrap the output in <html>, <head>, <body> — only the inner HTML content\n\nDo NOT output markdown or plain text — only HTML\n\nNo comments, no extra explanations, only the HTML content\n\nRequired Sections in Order:\n\nLease Abstract (h1)\n\nGeneral Information\n\nLease Term\n\nFinancials\n\nCritical Dates\n\nRenewal & Extension\n\nTermination & Default\n\nUse & Restrictions\n\nContact Information\n\nSpecial Clauses\n\nAttachments\n\nLease JSON Input:\n{{ $('Save Data In Supabase').item.json.FULL_JSON }}\n\nOutput:\nReturn ONLY the HTML lease summary. No explanations.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -11344,
+        -992
+      ],
+      "id": "6ea2a551-846c-4537-aea8-9a2e6ed62aa5",
+      "name": "MAIL HTML"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Save Data In Supabase').item.json.Email }}",
+        "subject": "={{ $('Save Data In Supabase').item.json.File_Name }} PDF (Summarized)",
+        "message": "={{ $json.output }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -10992,
+        -992
+      ],
+      "id": "5c2046ab-d30b-449b-ace9-2b45df20a6a1",
+      "name": "Mail To Agent",
+      "webhookId": "0ea27c39-e53d-4957-a771-026eb6bbb82c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aKqfhqTiLcsBf0Z8",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash-lite",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash-lite"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Extract all *future actionable dates* from the following lease JSON.\n\nRules:\n1. Only include dates that occur *in the future* compared to today.\n2. Do NOT include any past dates (e.g., Start Date, Lease Date if already in the past).\n3. Identify and include any actionable lease-related dates\n\n   - Any other date in the lease that requires an action or has legal importance.\n4. If a date is present but has already passed, exclude it entirely.\n5. If a date category exists but no date is found, output `\"Not Available\"`.\n6. For each valid future date, also include a human-readable **description** explaining what the event is.\n7. Output **JSON ONLY** in this exact structure:\n\n{\n  \"items\": [\n    {\n      \"name\": \"Renewal Notice Date\",\n      \"date\": \"2030-03-01\",\n      \"description\": \"Tenant must give written notice to renew the lease by this date.\"\n    },\n    {\n      \"name\": \"Security Deposit Return Deadline\",\n      \"date\": \"2030-06-02\",\n      \"description\": \"The landlord must return the security deposit by this deadline.\"\n    }\n  ],\n  \"unavailable\": {\n    \"Rent Escalation Date\": \"Not Available\",\n    \"Termination Notice Date\": \"Not Available\"\n  }\n}\n\nInput:\n{{ $('Save Data In Supabase').item.json.FULL_JSON }}\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        -10768,
+        -992
+      ],
+      "id": "e578c816-72d5-40db-b2a5-0507ab1560c5",
+      "name": "Dates",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "QHxzMHwF8XBljE0m",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Step 1: Get raw AI text\nlet rawText = $input.first().json.content.parts[0].text;\n\n// Step 2: Extract JSON portion only\nconst match = rawText.match(/\\{[\\s\\S]*\\}/);\nif (!match) {\n  throw new Error(\"No JSON found in AI output\");\n}\nlet jsonString = match[0];\n\n// Step 3: Parse JSON safely\nlet data;\ntry {\n  data = JSON.parse(jsonString);\n} catch (err) {\n  throw new Error(\"Invalid JSON after extraction: \" + err.message);\n}\n\n// Step 4: Prepare for filtering\nconst today = new Date();\nlet outputItems = [];\n\n// Get lease ID from the \"Create a row\" node\nconst leaseId = $('Save Data In Supabase').first().json.id;\n\n// Helper: check future date\nfunction isFuture(dateStr) {\n  const d = new Date(dateStr);\n  return !isNaN(d) && d >= today;\n}\n\n// Step 5: Loop through data.items\nif (Array.isArray(data.items)) {\n  for (const entry of data.items) {\n    if (!entry.date || !entry.name) continue;\n\n    // Only include future dates\n    if (isFuture(entry.date)) {\n      const iso = new Date(entry.date).toISOString().split(\"T\")[0];\n\n      outputItems.push({\n        json: {\n          lease_id: leaseId,        // Attach lease ID here\n          dateType: entry.name,\n          date: iso,\n          description: entry.description || \"\"\n        }\n      });\n    }\n  }\n}\n\n// Step 6: Return all items (n8n creates multiple events)\nreturn outputItems;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -10416,
+        -992
+      ],
+      "id": "bf513477-32c3-4538-b8b9-53cf4df5ac2a",
+      "name": "Dates (Updated)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Input: array of items from the previous node\n// Example format:\n// [\n//   { dateType: \"Lease End Date\", date: \"2030-05-03\", description: \"The official end date...\" },\n//   { dateType: \"Security Deposit Return Deadline\", date: \"2030-06-02\", description: \"The landlord must...\" }\n// ]\n\nconst inputItems = $input.all(); // all items from previous node\nconst outputItems = [];\n\n// Get lease_id from the first input item\nconst leaseId = $input.first().json.lease_id;\n\nfunction subtractFromDate(dateStr, { months = 0, days = 0 }) {\n  const d = new Date(dateStr);\n  if (months) d.setMonth(d.getMonth() - months);\n  if (days) d.setDate(d.getDate() - days);\n  return d.toISOString().split(\"T\")[0]; // YYYY-MM-DD\n}\n\nfor (const item of inputItems) {\n  const data = item.json;\n\n  // Only process valid dates\n  if (data.date && data.date !== \"Not Available\") {\n    // Month before\n    outputItems.push({\n      json: {\n        lease_id: leaseId,\n        dateType: data.dateType,\n        date: subtractFromDate(data.date, { months: 1 }),\n        description: data.description,\n        notificationType: \"1 Month Before\"\n      }\n    });\n\n    // Week before\n    outputItems.push({\n      json: {\n        lease_id: leaseId,\n        dateType: data.dateType,\n        date: subtractFromDate(data.date, { days: 7 }),\n        description: data.description,\n        notificationType: \"1 Week Before\"\n      }\n    });\n\n    // Day before\n    outputItems.push({\n      json: {\n        lease_id: leaseId,\n        dateType: data.dateType,\n        date: subtractFromDate(data.date, { days: 1 }),\n        description: data.description,\n        notificationType: \"1 Day Before\"\n      }\n    });\n  }\n}\n\nreturn outputItems;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -10192,
+        -1088
+      ],
+      "id": "300ce081-75ba-42d0-91b5-e002fb507e2f",
+      "name": "Dates To Be Stored In SupaBase"
+    },
+    {
+      "parameters": {
+        "tableId": "Notification_Data",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "Data_Type",
+              "fieldValue": "={{ $json.dateType }}"
+            },
+            {
+              "fieldId": "notification_type",
+              "fieldValue": "={{ $json.notificationType }}"
+            },
+            {
+              "fieldId": "description",
+              "fieldValue": "={{ $json.description }}"
+            },
+            {
+              "fieldId": "notification_date",
+              "fieldValue": "={{ $json.date }}"
+            },
+            {
+              "fieldId": "Lease ID",
+              "fieldValue": "={{ $json.lease_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -9968,
+        -1088
+      ],
+      "id": "f39facca-4840-45a1-a5e1-a1bb8a412ace",
+      "name": "Dates Info. In SupaBase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "0yxDbibxL67NqJNS",
+          "name": "Project LeaseLens"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -15888,
+        -576
+      ],
+      "id": "54e54518-dbde-4b8b-be31-880cd2905586",
+      "name": "Daily Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "Notification_Data",
+        "limit": 100,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "sent",
+              "condition": "eq",
+              "keyValue": "FALSE"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -15664,
+        -576
+      ],
+      "id": "4d691b80-e0f5-4377-b917-699d75c0c4f1",
+      "name": "Get Data",
+      "credentials": {
+        "supabaseApi": {
+          "id": "0yxDbibxL67NqJNS",
+          "name": "Project LeaseLens"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const today = new Date().toISOString().split('T')[0];\n\n// items is the array of rows from Supabase Get Rows node\nreturn items.filter(item => item.json.notification_date === today);\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -15440,
+        -576
+      ],
+      "id": "c54d2103-2102-45fd-8e34-c5445c431c61",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "LeaseAgreementsJSON",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $json['Lease ID'] }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -15216,
+        -576
+      ],
+      "id": "b3c1b765-2508-4035-ac00-6cc2c2853e25",
+      "name": "Get Data 2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "0yxDbibxL67NqJNS",
+          "name": "Project LeaseLens"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Prompt for Gemini AI:\n\nYou are an expert legal and real estate assistant. Your task is to generate a professional HTML email that will be sent to a real estate agent or landlord about upcoming critical dates from a lease agreement.\n\nRequirements:\n\nInput: You will receive structured JSON with the following fields for one or more upcoming events:\n\nAgent Name: {{ $json.File_Name }}\n\ndateType {{ $('Filter').item.json.Data_Type }}\n\ndate {{ $('Filter').item.json.notification_date }}\n\ndescription {{ $('Filter').item.json.description }}\n\nnotificationType {{ $('Filter').item.json.notification_type }}\n\nOutput: Generate an HTML email that includes:\n\nA professional greeting (e.g., \"Dear [Agent Name],\")\n\nA clear subject line in the HTML for context\n\nA table or list of all upcoming events included in the JSON, with the following columns/sections:\n• Event Name (dateType)\n• Scheduled Date (date)\n• Description (description)\n• Notification Timing (notificationType)\n\nA polite closing statement (e.g., \"Please ensure the necessary actions are taken. Best regards, [Your Company Name]\")\n\nStyling:\n\nUse clean HTML with inline CSS suitable for Gmail or other email clients.\n\nMake the table or list readable and professional. Highlight the date in bold.\n\nConstraints:\n\nInclude only future actionable events (dates that have not passed).\n\nDo not include JSON or code in the output — only ready-to-send HTML email content.\n\nEach event should appear as a row or list item with all its details.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -14992,
+        -672
+      ],
+      "id": "3c28690b-5e15-4718-aec7-85c9e90d40d6",
+      "name": "MAIL HTML 2"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Get Data 2').item.json.Email }}",
+        "subject": "=Important Dates: {{ $('Get Data 2').item.json.File_Name }} ",
+        "message": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -14640,
+        -576
+      ],
+      "id": "85e99cd5-4f4a-49b7-b429-99ff5fcae180",
+      "name": "Warning Mail",
+      "webhookId": "3dc8842c-c635-42f5-95e5-95e383ee1634",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aKqfhqTiLcsBf0Z8",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are generating a Slack message (NOT an email).\n\nWrite a clear, concise, professional Slack alert that will be sent to a real estate agent.\n\nContext:\nName: {{ $('Get Data 2').item.json.Name }}\n- Date Type (event name): {{ $('Filter').item.json.Data_Type }}\n- Notification Date (today): {{ $('Filter').item.json.notification_date }}\n- Notification Type: {{ $('Filter').item.json.notification_type }}  // \"1 Month Before\", \"1 Week Before\", \"1 Day Before\"\n- Description: {{ $('Filter').item.json.description }}\n\nYour task:\n1. Write a short Slack message that clearly notifies the agent about this upcoming lease milestone.\n2. Use a friendly but professional tone.\n3. Include the lease ID and event name clearly.\n4. Include a simple call to action if appropriate (e.g., review terms, contact tenant, prepare documents).\n5. DO NOT write HTML. Slack markdown only.\n6. Keep it readable and less than 6 lines.\n\nOutput requirements:\nA Slack Message",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -14416,
+        -576
+      ],
+      "id": "34072f83-6055-4686-84ed-ce0049affe83",
+      "name": "SLACK ALERT"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09EHHNMS93",
+          "mode": "list",
+          "cachedResultName": "all-general"
+        },
+        "text": "={{ $json.output }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        -14064,
+        -576
+      ],
+      "id": "c72796c1-a303-4c47-8831-d62835a00c33",
+      "name": "Slack Alert",
+      "webhookId": "0093cb92-fbba-4514-ac40-b69814f07b47",
+      "credentials": {
+        "slackApi": {
+          "id": "8kdZB0gOxFj4rHiR",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -13888,
+        -864
+      ],
+      "id": "5db810a6-1aea-4e5e-bd2c-1e85b8926ba3",
+      "name": "Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "QHxzMHwF8XBljE0m",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "Memory 1",
+        "contextWindowLength": 1
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -13792,
+        -864
+      ],
+      "id": "a84975e8-75a9-4ac6-a03f-6eac0c5051d2",
+      "name": "Memory"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -14992,
+        -448
+      ],
+      "id": "e08c4ca9-4556-478d-aa70-61d6cba0d9b0",
+      "name": "Gemini 2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "bQyyeVUf9X79X9m6",
+          "name": "API Key 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "Memory 2",
+        "contextWindowLength": 1
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -14864,
+        -448
+      ],
+      "id": "52a825c2-4bd7-4838-9bab-850ea6e82ec3",
+      "name": "Memory 2"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "Agreement-Lease",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -15888,
+        -992
+      ],
+      "id": "bdd4d357-5510-4044-901e-18796de762a9",
+      "name": "Webhook",
+      "webhookId": "968f59b1-4f10-4cca-be34-e1774969e463"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d0e9ba81-7ba6-4ff9-b2c4-c2d0b5360971",
+              "leftValue": "ID_Card_PDF",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "7dd940da-d5f1-4f95-9917-368caa1eb345",
+              "leftValue": "Last_3_Paystubs",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -15664,
+        496
+      ],
+      "id": "69187e6d-b91b-4830-ab84-f3b0df74de34",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "url": "=https://adfyaqvjhronondiyede.supabase.co/storage/v1/object/public/{{ $json.Key }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -14992,
+        496
+      ],
+      "id": "66300b8b-4983-4d9c-8f4f-0800041343c5",
+      "name": "HTTP Request — Download ID Card"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -13872,
+        496
+      ],
+      "id": "159047cf-a45d-4df4-a000-6b14ce2bd226",
+      "name": "combined into a single text block",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.output }}",
+        "options": {
+          "systemMessage": "You are an enterprise-grade tenant screening system. please merge the output in one json string.\n\nEvaluate the tenant based on:\n- Verified income\n- Employment stability\n- ID card authenticity\n- Paystub accuracy (dates, amounts)\n- Red flags\n- Risk levels\n\nReturn JSON:\n{\n  \"risk_score\": 0-100,\n  \"risk_level\": \"low/medium/high\",\n  \"income_to_rent_ratio\": \"\",\n  \"recommendation\": \"approve/decline/needs review\",\n  \"detailed_reasons\": []\n}\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -12848,
+        496
+      ],
+      "id": "204385c8-742c-411f-a9be-b8e1a094cfe0",
+      "name": "Tenant Screening AI Scoring Engine"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.output }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -12720,
+        720
+      ],
+      "id": "f8158fbb-de21-4a24-be42-b4459aa800ed",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -13360,
+        720
+      ],
+      "id": "467e8396-4b23-491e-943f-0d551f9e5c85",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "QHxzMHwF8XBljE0m",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nitems.forEach((item) => {\n  if (item.json.idCardText) {\n    item.json.idCardText = item.json.idCardText.trim().replace(/[^a-zA-Z0-9.,@ ]/g, \" \");\n  }\n  if (item.json.paystubsText) {\n    item.json.paystubsText = item.json.paystubsText.trim().replace(/[^a-zA-Z0-9.,@ ]/g, \" \");\n  }\n});\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -13648,
+        496
+      ],
+      "id": "feabc7b2-ec4a-4f8a-8784-b4bfea2e264b",
+      "name": "Clean & Pre-Process Text"
+    },
+    {
+      "parameters": {
+        "text": "=ID CARD TEXT:\n{{ $json.imageSummary }}\nPAYSTUBS TEXT:\n{{ $json.documentSummary }}",
+        "schemaType": "manual",
+        "inputSchema": "{\n\"full_name\": \"\",\n\"id_number\": \"\",\n\"dob\": \"\",\n\"address_on_id\": \"\",\n\"employer\": \"\",\n\"income_detected\": \"\",\n\"document_verification\": {\n\"id_card_clear\": true,\n\"paystubs_clear\": true\n}\n}",
+        "options": {
+          "systemPromptTemplate": "Extract tenant all information from the text.\nYou should generate the output in one json file."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        -13424,
+        496
+      ],
+      "id": "0ad19932-8956-4e18-9e36-0b421aba1603",
+      "name": "AI Tenant Data Extraction"
+    },
+    {
+      "parameters": {
+        "jsCode": "let raw =\n  $json.data ||\n  $json.scoring ||\n  $json.output ||\n  '{}';\nraw = raw.replace(/```(?:json)?|```/gi, '').trim();\nreturn JSON.parse(raw);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -12496,
+        496
+      ],
+      "id": "4942007d-cdf4-40b4-a0da-111ee3c05ca0",
+      "name": "Json parsing"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -12848,
+        720
+      ],
+      "id": "b04dae09-0daf-4104-a031-93672b6654ed",
+      "name": "Google Gemini Chat Model3",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "QHxzMHwF8XBljE0m",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      output: JSON.stringify($json.output)\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -13072,
+        496
+      ],
+      "id": "8a134213-f58a-4a74-8516-cb288d15dc0a",
+      "name": "Convert Json Object to String"
+    },
+    {
+      "parameters": {
+        "tableId": "Tenant_Screening",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "tenant_name",
+              "fieldValue": "={{ $('Webhook1').item.json.body.name }}"
+            },
+            {
+              "fieldId": "tenant_email",
+              "fieldValue": "={{ $('Webhook1').item.json.body.email }}"
+            },
+            {
+              "fieldId": "phone",
+              "fieldValue": "={{ $('Webhook1').item.json.body.phone }}"
+            },
+            {
+              "fieldId": "date_of_birth",
+              "fieldValue": "={{ $('Webhook1').item.json.body.dateOfBirth }}"
+            },
+            {
+              "fieldId": "Monthly_Income",
+              "fieldValue": "={{ $('Webhook1').item.json.body.monthlyIncome }}"
+            },
+            {
+              "fieldId": "red_flags",
+              "fieldValue": "={{ $('Json parsing').item.json.detailed_reasons }}"
+            },
+            {
+              "fieldId": "ai_tenant_json",
+              "fieldValue": "={{ $('Tenant Screening AI Scoring Engine').item.json.output }}"
+            },
+            {
+              "fieldId": "risk_level",
+              "fieldValue": "={{ $('Json parsing').item.json.risk_level }}"
+            },
+            {
+              "fieldId": "acceptance",
+              "fieldValue": "={{ $('Json parsing').item.json.recommendation }}"
+            },
+            {
+              "fieldId": "reason",
+              "fieldValue": "={{ $json.output.text }}"
+            },
+            {
+              "fieldId": "risk_score",
+              "fieldValue": "={{ $('Json parsing').item.json.risk_score }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -11920,
+        496
+      ],
+      "id": "3accd2cd-4413-4f41-86d8-4d1027ec6259",
+      "name": "Insert Tenant Screening data in Supabase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "0yxDbibxL67NqJNS",
+          "name": "Project LeaseLens"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "=abdulrehman657.pk@gmail.com",
+        "subject": "Approval Needed: Tenant Screening Completed",
+        "message": "=<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\" />\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\" />\n  <title>Tenant Screening Report</title>\n  <style>\n    body { margin:0; padding:0; background-color:#f4f6f8; font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif; color:#0f1720; }\n    .email-wrapper { width:100%; background-color:#f4f6f8; padding:24px 12px; }\n    .email-content { max-width:600px; margin:0 auto; }\n    .card { background:#ffffff; border-radius:8px; box-shadow:0 1px 3px rgba(16,24,40,0.06); overflow:hidden; }\n    .header { padding:20px 24px; border-bottom:1px solid #eef2f7; display:flex; align-items:center; gap:12px; }\n    .logo { width:44px; height:44px; border-radius:6px; background:#e6eef9; display:inline-block; text-align:center; line-height:44px; font-weight:600; color:#1e3a8a; }\n    .title { font-size:16px; font-weight:600; color:#0f1720; }\n    .preheader { display:none !important; visibility:hidden; opacity:0; height:0; width:0; overflow:hidden; mso-hide:all; }\n\n    .body { padding:24px; font-size:15px; line-height:1.6; color:#25303b; }\n    .section-title { font-weight:700; margin-top:24px; margin-bottom:12px; color:#0f1720; }\n    .details { width:100%; border-collapse:collapse; margin-top:8px; }\n    .details td { padding:10px 0; vertical-align:top; border-bottom:1px dashed #eef2f7; }\n    .label { width:36%; color:#556170; font-weight:600; }\n    .value { width:64%; color:#0f1720; word-break:break-word; }\n\n    .summary { margin-top:12px; background:#fbfdff; padding:14px; border-radius:6px; border:1px solid #eef6ff; color:#26343d; }\n\n    .footer { padding:16px 24px; font-size:13px; color:#7b8794; border-top:1px solid #eef2f7; }\n    .muted { color:#7b8794; font-size:13px; }\n\n    @media (max-width:420px) {\n      .label { display:block; width:100%; font-size:13px; padding-top:6px; }\n      .value { display:block; width:100%; padding-bottom:6px; }\n      .header { padding:16px; }\n      .body { padding:16px; }\n    }\n  </style>\n</head>\n<body>\n  <div class=\"preheader\">A tenant screening report for {{ $json.tenant_name }} is ready and requires your approval.</div>\n\n  <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" class=\"email-wrapper\" width=\"100%\">\n    <tr>\n      <td align=\"center\">\n        <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" class=\"email-content\" width=\"100%\">\n          <tr>\n            <td class=\"card\">\n              <!-- Header -->\n              <table role=\"presentation\" width=\"100%\" style=\"border-collapse:collapse;\">\n                <tr>\n                  <td class=\"header\">\n                    <div class=\"logo\" aria-hidden=\"true\">TS</div>\n                    <div>\n                      <div class=\"title\">Tenant Screening Report</div>\n                      <div style=\"font-size:13px; color:#6b7280;\">Automated Tenant Screening System</div>\n                    </div>\n                  </td>\n                </tr>\n              </table>\n\n              <!-- Body -->\n              <div class=\"body\">\n                <p>Hello Agent,</p>\n\n                <p>A tenant screening report has been completed and requires your approval. Please review the key results below:</p>\n\n                <table class=\"details\" role=\"presentation\" width=\"100%\">\n                  <tr>\n                    <td class=\"label\">Tenant Name</td>\n                    <td class=\"value\">{{ $json.tenant_name }}</td>\n                  </tr>\n                  <tr>\n                    <td class=\"label\">Screening Score</td>\n                    <td class=\"value\">{{ $('Json parsing').item.json.risk_score }}</td>\n                  </tr>\n                  <tr>\n                    <td class=\"label\">Risk Level</td>\n                    <td class=\"value\">{{ $json.risk_level }}</td>\n                  </tr>\n                  <tr>\n                    <td class=\"label\">Recommendation</td>\n                    <td class=\"value\">{{ $json.acceptance }}</td>\n                  </tr>\n                </table>\n\n                <div class=\"section-title\">Summary</div>\n                <div class=\"summary\">\n                  {{ $json.reason }}\n                </div>\n\n                <p style=\"margin-top:20px;\">Your approval is required to proceed with this tenant application. Please review the details carefully and take the necessary action.</p>\n\n                <p>Thank you for your prompt attention.</p>\n\n                <p>Regards,<br>\n                <b>Automated Tenant Screening System</b></p>\n              </div>\n\n              <!-- Footer -->\n              <div class=\"footer\">\n                <div class=\"muted\">&copy; <span id=\"year\"></span> Your Company. All rights reserved.</div>\n              </div>\n            </td>\n          </tr>\n        </table>\n      </td>\n    </tr>\n  </table>\n\n  <script>\n    try { document.getElementById('year').textContent = new Date().getFullYear(); } catch(e) {}\n  </script>\n</body>\n</html>",
+        "responseType": "customForm",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Approval Needed",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "approve"
+                  },
+                  {
+                    "option": "decline"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -11472,
+        592
+      ],
+      "id": "2be15134-1b58-400f-b1c6-1ffb8317b254",
+      "name": "Send a Email to Property Dealer/Admin/Business Owner",
+      "webhookId": "a8032cb1-08f4-48ae-86ca-432ff45dbce0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aKqfhqTiLcsBf0Z8",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainSummarization",
+      "typeVersion": 2.1,
+      "position": [
+        -12272,
+        496
+      ],
+      "id": "15a34313-8566-42ca-b4df-ebea85dd38c1",
+      "name": "Summarization Chain"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -12208,
+        720
+      ],
+      "id": "965e6f2f-e62e-420f-9f53-60d4b242ba7b",
+      "name": "Google Gemini Chat Model4",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "QHxzMHwF8XBljE0m",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a polite rejection email For This Tenant:\n\nInclude:\n- Tenant Name: {{ $json.tenant_name }}\n- Risk Score: {{ $json.risk_score }}\n- Reason: Use a professional explanation\n- Comments: {{ $json.reason }}\n\nTone: neutral, helpful, respectful.\n\nOutput:\nTHE EMAIL SHOULD BE IN HTML ONLY.\nNO SUBJECT ONLY HTML \nDO NOT MENTION PROPERTY DETAILS.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -15216,
+        -240
+      ],
+      "id": "496eebbd-d4ed-4a36-8f1c-dcbac2e3b48f",
+      "name": "Generate Rejection Email Content"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -15216,
+        -16
+      ],
+      "id": "73d03bd5-f70e-4629-a0f0-e9efd360aa14",
+      "name": "Google Gemini Chat Model5",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "QHxzMHwF8XBljE0m",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $workflow.id }}",
+        "contextWindowLength": "=1"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -15088,
+        -16
+      ],
+      "id": "942ca4c0-7126-4ae7-a966-18b782d11c4a",
+      "name": "Simple Memory1"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Switch1').item.json.tenant_email }}",
+        "subject": "Update On Tenant Application",
+        "message": "={{ $json.output }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -14864,
+        -144
+      ],
+      "id": "7b303aec-df1a-49e7-8bd0-9593eab2c365",
+      "name": "Send Rejection Email to Tenant",
+      "webhookId": "0927ee6c-987a-4da8-b184-1a700140f715",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aKqfhqTiLcsBf0Z8",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "aichampionbano@gmail.com",
+        "subject": "=Tenant Rejected: {{ $('Switch1').item.json.tenant_name }}",
+        "message": "=<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\"/>\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"/>\n    <title>Tenant Application Update</title>\n  </head>\n\n  <body style=\"margin:0;padding:0;background-color:#f3f4f6;font-family:Arial,Helvetica,sans-serif;color:#1f2937;\">\n\n    <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\">\n      <tr>\n        <td align=\"center\" style=\"padding:32px 12px;\">\n\n          <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\"\n            style=\"max-width:100%;background:#ffffff;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb;box-shadow:0 10px 30px rgba(0,0,0,0.05);\">\n\n            <!-- Header -->\n            <tr>\n              <td style=\"padding:24px 24px;background:#7f1d1d;\">\n                <h1 style=\"margin:0;color:#ffffff;font-size:18px;font-weight:600;\">\n                  Tenant Application Update\n                </h1>\n                <p style=\"margin:8px 0 0;color:#fecaca;font-size:13px;line-height:1.4;\">\n                  The following tenant application has been reviewed and declined.\n                </p>\n              </td>\n            </tr>\n\n            <!-- Content -->\n            <tr>\n              <td style=\"padding:24px;\">\n                \n                <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\"\n                  style=\"font-size:14px;line-height:1.6;color:#1f2937;\">\n                  \n                  <tr>\n                    <td style=\"padding:10px 0;\">\n                      <strong>Name:</strong><br/>\n                      {{ $('Switch1').item.json.tenant_name }}\n                    </td>\n                  </tr>\n\n                  <tr>\n                    <td style=\"padding:10px 0;\">\n                      <strong>Risk Score:</strong><br/>\n                      {{ $('Switch1').item.json.risk_score }}\n                    </td>\n                  </tr>\n\n                  <tr>\n                    <td style=\"padding:10px 0;\">\n                      <strong>Reason:</strong><br/>\n                      {{ $('Switch1').item.json.reason }}\n                    </td>\n                  </tr>\n\n                </table>\n\n                <div style=\"margin-top:20px;padding:14px;border-radius:6px;background:#fef2f2;border:1px solid #fecaca;font-size:13px;color:#7f1d1d;\">\n                  Please review the information above and proceed according to your screening guidelines.\n                </div>\n\n              </td>\n            </tr>\n\n            <!-- Footer -->\n            <tr>\n              <td style=\"padding:16px 24px;border-top:1px solid #f0f0f0;font-size:12px;color:#6b7280;\">\n                This notification was generated automatically. If you have questions, please review the tenant screening details in your dashboard.\n              </td>\n            </tr>\n\n          </table>\n\n        </td>\n      </tr>\n    </table>\n\n  </body>\n</html>\n",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -14640,
+        -144
+      ],
+      "id": "18df0804-5512-4edd-8889-79fc70c9b4e2",
+      "name": "Notify Property Manager/Admin/Property Owner",
+      "webhookId": "29594513-e070-4bb3-9e7e-92fc4467cc92",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aKqfhqTiLcsBf0Z8",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "Tenant_Screening",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Switch1').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "Done (Rejected)"
+            },
+            {
+              "fieldId": "decision_date",
+              "fieldValue": "={{$now}}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -14416,
+        -144
+      ],
+      "id": "934056a1-6e64-426e-85d6-60c6d7e5158c",
+      "name": "Update Supabase (Save Rejection)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "0yxDbibxL67NqJNS",
+          "name": "Project LeaseLens"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "Tenant_Screening"
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -15664,
+        16
+      ],
+      "id": "0ae097b5-2818-4385-a4fe-23f9827d886a",
+      "name": "Get Tenant Record",
+      "credentials": {
+        "supabaseApi": {
+          "id": "0yxDbibxL67NqJNS",
+          "name": "Project LeaseLens"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a professional tenant-approval email For Tenat:\n\nInclude:\n- Tenant Name: {{ $json.tenant_name }}\n- Risk Score: {{ $json.risk_score }}\n- Reason: {{ $json.reason }}\n\nTone: polite, clear, real-estate professional.\n\nOUTPUT:\nTHE EMAIL SHOULD BE IN HTML ONLY.\nNO SUBJECT ONLY HTML.\nDO NOT MENTION PROPERTY DETAILS.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -15216,
+        160
+      ],
+      "id": "23bd0d68-3a8c-472a-a359-4a7248cd204a",
+      "name": "Generate Approval Email Content"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Switch1').item.json.tenant_email }}",
+        "subject": "Update On Tenant Application",
+        "message": "={{ $json.output }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -14864,
+        160
+      ],
+      "id": "fa9f507a-8aea-4f00-a875-16c19b1ff2cf",
+      "name": "Send Approval Email to Tenant",
+      "webhookId": "0927ee6c-987a-4da8-b184-1a700140f715",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aKqfhqTiLcsBf0Z8",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "aichampionbano@gmail.com",
+        "subject": "=Tenant Approved: {{ $('Switch1').item.json.tenant_email }}",
+        "message": "=<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\"/>\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"/>\n    <title>Tenant Application Approved</title>\n  </head>\n\n  <body style=\"margin:0;padding:0;background-color:#f3f4f6;font-family:Arial,Helvetica,sans-serif;color:#1f2937;\">\n\n    <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\">\n      <tr>\n        <td align=\"center\" style=\"padding:32px 12px;\">\n\n          <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\"\n            style=\"max-width:100%;background:#ffffff;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb;box-shadow:0 10px 30px rgba(0,0,0,0.05);\">\n\n            <!-- Header -->\n            <tr>\n              <td style=\"padding:24px 24px;background:#065f46;\">\n                <h1 style=\"margin:0;color:#ffffff;font-size:18px;font-weight:600;\">\n                  Tenant Application Approved\n                </h1>\n                <p style=\"margin:8px 0 0;color:#bbf7d0;font-size:13px;line-height:1.4;\">\n                  The following tenant application has been reviewed and approved.\n                </p>\n              </td>\n            </tr>\n\n            <!-- Content -->\n            <tr>\n              <td style=\"padding:24px;\">\n                \n                <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\"\n                  style=\"font-size:14px;line-height:1.6;color:#1f2937;\">\n                  \n                  <tr>\n                    <td style=\"padding:10px 0;\">\n                      <strong>Name:</strong><br/>\n                      {{ $('Switch1').item.json.tenant_name }}\n                    </td>\n                  </tr>\n\n                  <tr>\n                    <td style=\"padding:10px 0;\">\n                      <strong>Risk Score:</strong><br/>\n                      {{ $('Switch1').item.json.risk_score }}\n                    </td>\n                  </tr>\n\n                  <tr>\n                    <td style=\"padding:10px 0;\">\n                      <strong>Reason:</strong><br/>\n                      {{ $('Switch1').item.json.reason }}\n                    </td>\n                  </tr>\n\n                </table>\n\n                <div style=\"margin-top:20px;padding:14px;border-radius:6px;background:#ecfdf5;border:1px solid #6ee7b7;font-size:13px;color:#065f46;\">\n                  You may proceed with the next steps in the leasing process.\n                </div>\n\n              </td>\n            </tr>\n\n            <!-- Footer -->\n            <tr>\n              <td style=\"padding:16px 24px;border-top:1px solid #f0f0f0;font-size:12px;color:#6b7280;\">\n                This notification was generated automatically. Please retain this message for your records.\n              </td>\n            </tr>\n\n          </table>\n\n        </td>\n      </tr>\n    </table>\n\n  </body>\n</html>\n",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -14640,
+        160
+      ],
+      "id": "ad771e47-a7e3-4c88-a7d8-ff9245e31145",
+      "name": "Notify Property Manager/Admin/Property Owner1",
+      "webhookId": "29594513-e070-4bb3-9e7e-92fc4467cc92",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aKqfhqTiLcsBf0Z8",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "Tenant_Screening",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Switch1').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "Done (Approved)"
+            },
+            {
+              "fieldId": "decision_date",
+              "fieldValue": "={{$now}}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -14416,
+        160
+      ],
+      "id": "eef0d616-baa4-4dc4-876f-3677d760208f",
+      "name": "Update Supabase (Save Approval)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "0yxDbibxL67NqJNS",
+          "name": "Project LeaseLens"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "Audit_logs",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "Tenant_ID",
+              "fieldValue": "={{ $('Get Tenant Record').item.json.id }}"
+            },
+            {
+              "fieldId": "Status",
+              "fieldValue": "={{ $json.status }}"
+            },
+            {
+              "fieldId": "Reason",
+              "fieldValue": "={{ $json.reason }}"
+            },
+            {
+              "fieldId": "Decision_Time",
+              "fieldValue": "={{ $now }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -14192,
+        16
+      ],
+      "id": "9bd2dfd0-8cfc-4781-a26d-34e2040fb6ce",
+      "name": "Log Decision into audit_logs table",
+      "credentials": {
+        "supabaseApi": {
+          "id": "0yxDbibxL67NqJNS",
+          "name": "Project LeaseLens"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate a random unique ID\nfunction generateUniqueId(length = 8) {\n    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';\n    let result = '';\n    for (let i = 0; i < length; i++) {\n        result += chars.charAt(Math.floor(Math.random() * chars.length));\n    }\n    return result;\n}\n\n// Determine category based on binary field name\nfunction detectCategory(key) {\n    const lower = key.toLowerCase();\n\n    if (\n        lower.includes(\"id\") ||\n        lower.includes(\"frontid\") ||\n        lower.includes(\"backid\") ||\n        lower.includes(\"idcard\")\n    ) {\n        return \"ID_Cards\";\n    }\n\n    if (\n        lower.includes(\"pay\") ||\n        lower.includes(\"stub\") ||\n        lower.includes(\"paystub\")\n    ) {\n        return \"Pay_Stubs\";\n    }\n\n    // add more rules if needed\n    return \"Uncategorized\";\n}\n\nconst output = [];\n\nfor (const item of items) {\n    if (!item.binary) continue;\n\n    for (const key of Object.keys(item.binary)) {\n        const file = item.binary[key];\n\n        // Extract original name + ext\n        const originalName = file.fileName || \"file\";\n        const ext = originalName.split('.').pop();\n        const baseName = originalName.replace(/\\.[^/.]+$/, \"\");\n\n        // Generate unique filename\n        const uniquePart = generateUniqueId(8);\n        const finalName = `${baseName}-${uniquePart}.${ext}`;\n\n        // Detect category based on the key name\n        const category = detectCategory(key);\n\n        // Build a new item for output\n        const newItem = {\n            json: {\n                fileName: finalName,\n                fieldName: key,\n                category: category,\n                mimeType: file.mimeType || \"application/octet-stream\"\n            },\n            binary: {\n                [key]: {\n                    ...file,\n                    fileName: finalName\n                }\n            }\n        };\n\n        output.push(newItem);\n    }\n}\n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -15440,
+        496
+      ],
+      "id": "735243b2-4434-44ff-8fe3-6c29ac988a00",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://adfyaqvjhronondiyede.supabase.co/storage/v1/object/{{ $json.category }}/{{ $json.fileName }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkZnlhcXZqaHJvbm9uZGl5ZWRlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NDE1OTYxNSwiZXhwIjoyMDc5NzM1NjE1fQ.Qwv1KCfE46VWy9p_Cjy3LSX42naONMc8SDoCqftgFdE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "={{ $json.mimeType }}"
+            },
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkZnlhcXZqaHJvbm9uZGl5ZWRlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NDE1OTYxNSwiZXhwIjoyMDc5NzM1NjE1fQ.Qwv1KCfE46VWy9p_Cjy3LSX42naONMc8SDoCqftgFdE"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "={{ $json.fieldName }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -15216,
+        496
+      ],
+      "id": "980dfcc5-1a5e-4a1a-a858-77645bb46062",
+      "name": "HTTP Request — Upload ID Card"
+    },
+    {
+      "parameters": {
+        "jsCode": "const projectRef = \"adfyaqvjhronondiyede\";\nconst out = [];\n\nfor (const item of $input.all()) {\n    const key = item.json.Key; \n    const lowerKey = key.toLowerCase();\n\n    const url = `https://${projectRef}.supabase.co/storage/v1/object/public/${key}`;\n\n    let category = \"unknown\";\n\n    if (lowerKey.endsWith(\".png\") ||\n        lowerKey.endsWith(\".jpg\") ||\n        lowerKey.endsWith(\".jpeg\") ||\n        lowerKey.endsWith(\".webp\") ||\n        lowerKey.includes(\"images/\")\n    ) {\n        category = \"images\";\n\n    } else if (lowerKey.endsWith(\".pdf\") ||\n               lowerKey.endsWith(\".docx\") ||\n               lowerKey.endsWith(\".doc\") ||\n               lowerKey.includes(\"additional_documents\")\n    ) {\n        category = \"documents\";\n\n    } else if (lowerKey.endsWith(\".mp4\") ||\n               lowerKey.endsWith(\".mov\") ||\n               lowerKey.endsWith(\".avi\") ||\n               lowerKey.endsWith(\".mkv\") ||\n               lowerKey.includes(\"videos/\")\n    ) {\n        category = \"videos\";\n\n    } else if (lowerKey.includes(\"floor_plans\")) {\n        category = \"floorPlans\";\n    }\n\n    out.push({\n        json: {\n            key,\n            url,\n            category\n        }\n    });\n}\n\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -14768,
+        496
+      ],
+      "id": "207220c5-49c9-436f-b845-650e40faf974",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "images",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "38902a67-cd0c-4fa9-b3f6-ae478fd2d874"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a14e871b-3fde-4744-adf9-40dc375966d1",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "documents",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -14544,
+        496
+      ],
+      "id": "585814c6-f556-45ae-b779-e93080aa78a3",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "imageUrls": "={{ $json.url }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        -14320,
+        400
+      ],
+      "id": "28652150-453d-48dd-90b1-27db10c32865",
+      "name": "Analyze an image",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "bQyyeVUf9X79X9m6",
+          "name": "API Key 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregator for image summaries\nconst imageSummaries = [];\n\n// Loop through all incoming items\nfor (const item of $input.all()) {\n    const summary = $input.first().json.content.parts[0].text; // adapt the key if it's different\n    if (summary) {\n        imageSummaries.push(summary);\n    }\n}\n\n// Combine all summaries into one string\nconst combinedSummary = imageSummaries.join(\"\\n\\n---\\n\\n\"); // optional separator\n\nreturn [{\n    json: {\n        imageSummary: combinedSummary,\n        numberOfImages: imageSummaries.length\n    }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -14096,
+        400
+      ],
+      "id": "1a51524d-6ca1-4395-afa8-1742c091c887",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregator for document summaries\nconst docSummaries = [];\n\nfor (const item of $input.all()) {\n    const summary = $input.first().json.content.parts[0].text; // adjust key if different\n    if (summary) {\n        docSummaries.push(summary);\n    }\n}\n\nconst combinedDocSummary = docSummaries.join(\"\\n\\n---\\n\\n\");\n\nreturn [{\n    json: {\n        documentSummary: combinedDocSummary,\n        numberOfDocuments: docSummaries.length\n    }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -14096,
+        592
+      ],
+      "id": "79c20147-04e9-4cee-b7fe-b2023af6be3d",
+      "name": "Code in JavaScript3"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tenant-data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -15888,
+        496
+      ],
+      "id": "b208d942-5055-4ddb-9336-ac795cb2822f",
+      "name": "Webhook1",
+      "webhookId": "76ba8292-2ad8-41e1-8b4f-b39a47e2e417"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "db859763-a8aa-463e-b856-caf5b48d38be",
+              "leftValue": "={{ $json.acceptance }}",
+              "rightValue": "needs review",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -11696,
+        496
+      ],
+      "id": "c1272183-ad91-46da-bfab-6c6eda232fbc",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "Tenant_Screening",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('If2').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.data['Approval Needed'] }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -11024,
+        496
+      ],
+      "id": "4a20946b-ba9a-4c8e-9120-07f11687b0f1",
+      "name": "Update a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "0yxDbibxL67NqJNS",
+          "name": "Project LeaseLens"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4e4306c2-8d57-4bf6-9d16-1879ade31f0f",
+              "leftValue": "={{ $json.data['Approval Needed'] }}",
+              "rightValue": "Approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -11248,
+        592
+      ],
+      "id": "80094c53-c4bf-4ba8-ad11-58e0aa5b6d8d",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "Tenant_Screening",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Insert Tenant Screening data in Supabase').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.data['Approval Needed'] }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -11024,
+        688
+      ],
+      "id": "1ed24e71-6e90-4153-89b2-45f64ec2724d",
+      "name": "Update a row1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "0yxDbibxL67NqJNS",
+          "name": "Project LeaseLens"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "Tenant_Screening",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.acceptance }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -11472,
+        400
+      ],
+      "id": "72a9ac06-ecc1-4d57-9574-989d84918b96",
+      "name": "Update a row2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "0yxDbibxL67NqJNS",
+          "name": "Project LeaseLens"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -15888,
+        16
+      ],
+      "id": "f3968db7-a5ff-4b36-8799-949105b6adc4",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "decline",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "53337a63-c981-4feb-a7f0-fbad4d43b480"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "877df94b-98d1-4c5e-8211-810e76a22ac2",
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "approve",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -15440,
+        16
+      ],
+      "id": "9b94dbb9-8141-4f7c-b8ef-fd247186bb72",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "resource": "document",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "documentUrls": "={{ $json.url }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        -14320,
+        592
+      ],
+      "id": "61eedc5e-0332-4732-92da-59a236b2a341",
+      "name": "Analyze document",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "bQyyeVUf9X79X9m6",
+          "name": "API Key 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "### Lease Agreement Flow\n",
+        "height": 944,
+        "width": 6448,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -15984,
+        -1200
+      ],
+      "id": "302b1e2b-a940-4d31-b915-39a6af3e7511",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "### Tenant Screening Flow\n",
+        "height": 1232,
+        "width": 6448,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -15984,
+        -256
+      ],
+      "id": "536b6550-39c7-492c-832c-63b5fc07cdae",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -15488,
+        1856
+      ],
+      "id": "dc347485-6821-4cdb-853c-3e1539fb6053",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -14240,
+        1008
+      ],
+      "id": "b4a02abd-feae-4b3c-9c28-105c2d662de9",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "tableId": "Property_Information",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "Address:",
+              "fieldValue": "={{ $json.data[0].allInputData.body.address }}"
+            },
+            {
+              "fieldId": "Location:",
+              "fieldValue": "={{ $json.data[0].allInputData.body.location }}"
+            },
+            {
+              "fieldId": "Neighborhood/Area",
+              "fieldValue": "={{ $json.data[0].allInputData.body.neighborhood }}"
+            },
+            {
+              "fieldId": "SQ.Footing:",
+              "fieldValue": "={{ $json.data[0].allInputData.body.squareFootage }}"
+            },
+            {
+              "fieldId": "Year_Built",
+              "fieldValue": "={{ $json.data[0].allInputData.body.yearBuilt }}"
+            },
+            {
+              "fieldId": "Lot_Size:",
+              "fieldValue": "={{ $json.data[0].allInputData.body.lotSize }}"
+            },
+            {
+              "fieldId": "HOA (If Any)",
+              "fieldValue": "={{ $json.data[0].allInputData.body.hoaFees }}"
+            },
+            {
+              "fieldId": "Bedroom:",
+              "fieldValue": "={{ $json.data[0].allInputData.body.bedrooms }}"
+            },
+            {
+              "fieldId": "Bathrooms:",
+              "fieldValue": "={{ $json.data[0].allInputData.body.bathrooms }}"
+            },
+            {
+              "fieldId": "Parking_Details:",
+              "fieldValue": "={{ $json.data[0].allInputData.body.parkingDetails }}"
+            },
+            {
+              "fieldId": "Property_Highlights",
+              "fieldValue": "={{ $json.data[0].allInputData.body.propertyHighlights }}"
+            },
+            {
+              "fieldId": "Neighborhood_Highlights",
+              "fieldValue": "={{ $json.data[0].allInputData.body.neighborhoodHighlights }}"
+            },
+            {
+              "fieldId": "Target_Audience",
+              "fieldValue": "={{ $json.data[0].allInputData.body.targetAudience }}"
+            },
+            {
+              "fieldId": "Listing_Type:",
+              "fieldValue": "={{ $json.data[0].allInputData.body.listingType }}"
+            },
+            {
+              "fieldId": "Monthly_Rent:",
+              "fieldValue": "={{ $json.data[0].allInputData.body.monthlyRent }}"
+            },
+            {
+              "fieldId": "Security_Deposit:",
+              "fieldValue": "={{ $json.data[0].allInputData.body.securityDeposit }}"
+            },
+            {
+              "fieldId": "Minimum_Lease_Term:",
+              "fieldValue": "={{ $json.data[0].allInputData.body.minLeaseTerm }}"
+            },
+            {
+              "fieldId": "Preferred _Tone_For_AI_Description:",
+              "fieldValue": "={{ $json.data[0].allInputData.body.preferredTone }}"
+            },
+            {
+              "fieldId": "Name:",
+              "fieldValue": "={{ $json.data[0].allInputData.body.agentName }}"
+            },
+            {
+              "fieldId": "Email:",
+              "fieldValue": "={{ $json.data[0].allInputData.body.agentEmail }}"
+            },
+            {
+              "fieldId": "Agent_Notes:",
+              "fieldValue": "={{ $json.data[0].allInputData.body.agentNotes }}"
+            },
+            {
+              "fieldId": "Note_For_AI:",
+              "fieldValue": "={{ $json.data[0].allInputData.body.fieldNoteForAI }}"
+            },
+            {
+              "fieldId": "Demand",
+              "fieldValue": "={{ $json.data[0].allInputData.body.priceDemand }}"
+            },
+            {
+              "fieldId": "Property_Type",
+              "fieldValue": "={{ $json.data[0].allInputData.body.propertyType }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -14016,
+        1008
+      ],
+      "id": "01f3465e-0298-4202-aed0-586a9e6c7d97",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "0yxDbibxL67NqJNS",
+          "name": "Project LeaseLens"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://adfyaqvjhronondiyede.supabase.co/storage/v1/object/{{ $json.bucket }}/{{ $json.fileName }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "authorization",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkZnlhcXZqaHJvbm9uZGl5ZWRlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NDE1OTYxNSwiZXhwIjoyMDc5NzM1NjE1fQ.Qwv1KCfE46VWy9p_Cjy3LSX42naONMc8SDoCqftgFdE"
+            },
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkZnlhcXZqaHJvbm9uZGl5ZWRlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NDE1OTYxNSwiZXhwIjoyMDc5NzM1NjE1fQ.Qwv1KCfE46VWy9p_Cjy3LSX42naONMc8SDoCqftgFdE"
+            },
+            {
+              "name": "content-type",
+              "value": "={{ $json.mimeType }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "={{ $json.originalKey }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -15264,
+        1904
+      ],
+      "id": "c62d0b63-6536-4402-bdd7-591a2c6e4a6d",
+      "name": "Files Stored In Supabase"
+    },
+    {
+      "parameters": {
+        "resource": "video",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "videoUrls": "={{ $json.url }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        -14528,
+        1968
+      ],
+      "id": "7eb8beb6-1f56-4852-a2ba-79fe80f458e5",
+      "name": "Analyze video",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "QHxzMHwF8XBljE0m",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "numberInputs": 4
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -13792,
+        1584
+      ],
+      "id": "9fb3f497-3eaf-4556-b38f-88c27ad173a3",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -13568,
+        1616
+      ],
+      "id": "5f6c242e-6c8b-419d-aae5-1542beaafeb6",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "abb73ed5-ef04-45fe-a68e-5a1b0473fef0",
+              "name": "Document Summary",
+              "value": "={{ $json.content.parts[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -14240,
+        1584
+      ],
+      "id": "7a74d68d-6547-4930-b943-87a49a03359f",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2866bcc9-6c8d-4105-8489-7398993559eb",
+              "name": "video summary",
+              "value": "={{ $json.content.parts[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -14240,
+        2112
+      ],
+      "id": "edf93dd9-8998-4ca0-b3be-9124f97d6606",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregator for video summaries\nconst videoSummaries = [];\n\nfor (const item of $input.all()) {\n    const summary = $input.first().json['video summary']; // adjust key if different\n    if (summary) {\n        videoSummaries.push(summary);\n    }\n}\n\nconst combinedVideoSummary = videoSummaries.join(\"\\n\\n---\\n\\n\");\n\nreturn [{\n    json: {\n        videoSummary: combinedVideoSummary,\n        numberOfVideos: videoSummaries.length\n    }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -14016,
+        2112
+      ],
+      "id": "bf88e512-54da-4eb8-9ebf-c5ddebc33570",
+      "name": "Code in JavaScript4"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.output }}",
+        "options": {
+          "systemMessage": "=Purpose: Produce:\n\nMAIN DESCRIPTION USING THESE PARAMETERS\n\nNOTE:{{ $('Aggregate1').item.json.data[0]['Note_For_AI:'] }}\n\nTARGET AUDIENCE: {{ $('Aggregate1').item.json.data[0].Target_Audience }}\n\nTONE: {{ $('Aggregate1').item.json.data[0]['Preferred _Tone_For_AI_Description:'] }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -12992,
+        1616
+      ],
+      "id": "1d099c1d-47e4-4a53-9cee-2038f5fda55b",
+      "name": "AI: Generate Multiple Description Styles"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.output }}",
+        "options": {
+          "systemMessage": "AI Generates:\n- SEO-optimized version\n- Platform-specific:\n-- Zillow version\n-- Realtor.com version\n-- Facebook description\n-- Instagram caption\n-- Twitter/X short post\n\nOutput JSON:\n\n{\n  \"seo_description\": \"\",\n  \"zillow_copy\": \"\",\n  \"realtor_copy\": \"\",\n  \"facebook_post\": \"\",\n  \"instagram_caption\": \"\",\n  \"twitter_short\": \"\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -12640,
+        1616
+      ],
+      "id": "b30230f8-e88e-4b66-bb46-327956b215c7",
+      "name": "AI: SEO Optimization"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Inputs:\n\nAddress: {{ $('Aggregate1').item.json.data[0]['Address:'] }}\n\nProperty highlights: {{ $('Aggregate1').item.json.data[0].Property_Highlights }}\n\nNeighborhood/area: {{ $('Aggregate1').item.json.data[0].Neighborhood_Highlights }}",
+        "options": {
+          "systemMessage": "AI generates:\n- Comparison text vs similar local properties\n- Key differentiators\n- Target-audience-specific value highlights\n\nOutput:\n{\n  \"comparison_paragraph\": \"\",\n  \"unique_selling_points\": []\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -12288,
+        1616
+      ],
+      "id": "d2589e68-d14c-4899-a03e-940495c06ef7",
+      "name": "AI Market Comparison Text"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Based on target audience + listing details:\n{{ $json.output }}",
+        "options": {
+          "systemMessage": "AI outputs:\n- Short cold outreach email\n- Long storytelling email\n- Agent follow-up message template\n\n{\n  \"email_short\": \"\",\n  \"email_long\": \"\",\n  \"followup_message\": \"\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -11936,
+        1616
+      ],
+      "id": "9040b893-0a22-4c54-8f68-5fc86dae7dc6",
+      "name": "AI — Generate Email Templates for Prospects"
+    },
+    {
+      "parameters": {
+        "jsCode": "const emailTemplates = $input.all().map((item) => item.json);\nconst marketComparisonText = $(\"AI Market Comparison Text\")\n  .all()\n  .map((item) => item.json);\nconst seoOptimization = $(\"AI: SEO Optimization\")\n  .all()\n  .map((item) => item.json);\nconst multipleDescriptionStyles = $(\"AI: Generate Multiple Description Styles\")\n  .all()\n  .map((item) => item.json);\nconst agent = $(\"Complete Description\")\n  .all()\n  .map((item) => item.json);\n\nconst combinedData = {\n  emailTemplates,\n  marketComparisonText,\n  seoOptimization,\n  multipleDescriptionStyles,\n  agent,\n};\n\nreturn [{ json: combinedData }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -11584,
+        1616
+      ],
+      "id": "4d166e0b-bc48-48ec-a7d8-c572f6d327f7",
+      "name": "Create Master Listing Package"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.emailTemplates[0].output }}\n{{ $json.marketComparisonText[0].output }}\n{{ $json.seoOptimization[0].output }}\n{{ $json.multipleDescriptionStyles[0].output }}\n{{ $json.agent[0].output }}",
+        "options": {
+          "systemMessage": "=You are an AI whose ONLY job is to convert a JSON object into a beautifully formatted, professional HTML brochure for real estate listings.\n\nSTRICT RULES:\n- Output ONLY HTML.\n- NO explanations. NO commentary. NO summaries. NO markdown.\n- You must transform the JSON into a full real-estate listing brochure layout.\n- Never describe what the JSON means. Never explain. Only convert to HTML.\n- The final output MUST be printable-friendly HTML for generating a PDF.\n- MUST use headings, subheadings, bullet points, tables, and clear sections.\n- MUST follow the brand colors:\n  • Primary Color: #034ba9\n  • Accent Color: #3bb5ff\n\nTHE HTML MUST INCLUDE:\n- Title section with the property address\n- Subtitles and section headers\n- Property details (price, type, style, key features, etc.)\n- Main property description\n- Website summary (if provided)\n- Market comparison paragraph\n- Unique selling points (bullet format)\n- SEO optimized summary (if available)\n- Agent info (name, phone, email, etc.)\n- Any other fields present in the JSON\n\nSTYLING REQUIREMENTS:\n- Clean, modern layout\n- Professional real-estate brochure style\n- All formatting must be HTML & inline CSS only\n- No external frameworks\n\nOUTPUT FORMAT:\nReturn ONLY a complete HTML document such as:\n\n<!DOCTYPE html>\n<html> ... </html>\n\nNo markdown. No backticks. No commentary.\n\nYour entire response is strictly HTML populated with the JSON data.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -11360,
+        1616
+      ],
+      "id": "0bbf30f2-6079-4a5e-87ec-7bebefa611ea",
+      "name": "Convert Package Into HTML/PDF-Ready Format"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process all input items and remove ```html\\n and ``` wrappers from 'output' field\nreturn $input.all().map(item => {\n  return {\n    json: {\n      ...item.json,\n      output: item.json.output?.replace(/^```html\\n|```$/g, '')\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -11008,
+        1616
+      ],
+      "id": "3fd6c233-2297-465e-afd3-976470c465c1",
+      "name": "Remove the ```html\\n from previous node"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.pdfshift.io/v3/convert/pdf",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "sk_9459140fe007de2d68fbd82ba8d9716f4c15686c"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "source",
+              "value": "={{ $json.output }}"
+            },
+            {
+              "name": "landscape",
+              "value": "false"
+            },
+            {
+              "name": "use_print",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "property-listing-package.pdf"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -10720,
+        1616
+      ],
+      "id": "cdd27fe5-cb9d-42f7-8dfc-394f4e5fd51c",
+      "name": "Generate PDF Marketing Kit"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "Property_Information",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Aggregate1').item.json.data[0].id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "AI_Description",
+              "fieldValue": "={{ $('Complete Description').item.json.output }}"
+            },
+            {
+              "fieldId": "AI_SEO_Optimization",
+              "fieldValue": "={{ $('AI: SEO Optimization').item.json.output }}"
+            },
+            {
+              "fieldId": "AI_Email_Texts",
+              "fieldValue": "={{ $('AI — Generate Email Templates for Prospects').item.json.output }}"
+            },
+            {
+              "fieldId": "Ai_Comparison_Text",
+              "fieldValue": "={{ $('AI Market Comparison Text').item.json.output }}"
+            },
+            {
+              "fieldId": "Ai_Social_Posts",
+              "fieldValue": "={{ $('AI: Generate Multiple Description Styles').item.json.output }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -10496,
+        1520
+      ],
+      "id": "ede27e59-2d89-448d-a434-692637867303",
+      "name": "Save Property Package to Supabase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "0yxDbibxL67NqJNS",
+          "name": "Project LeaseLens"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Aggregate1').item.json.data[0]['Email:'] }}",
+        "subject": "=Your Complete AI-Generated Property Listing Package for {{ $('Aggregate1').item.json.data[0]['Address:'] }}",
+        "message": "=<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\"/>\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"/>\n    <title>AI Listing Package Ready</title>\n  </head>\n  <body style=\"margin:0;padding:0;background-color:#f7f7f7;font-family:Arial,Helvetica,sans-serif;color:#222;\">\n\n    <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\">\n      <tr>\n        <td align=\"center\" style=\"padding:24px 12px;\">\n          \n          <table width=\"640\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\"\n                 style=\"max-width:100%;background:#ffffff;border-radius:6px;overflow:hidden;border:1px solid #e5e7eb;\">\n            \n            <!-- Header -->\n            <tr>\n              <td style=\"padding:20px 24px 4px;\">\n                <h1 style=\"margin:0;color:#111827;font-size:18px;font-weight:600;\">\n                  Your AI-generated listing package is ready\n                </h1>\n                <p style=\"margin:6px 0 0;color:#6b7280;font-size:13px;line-height:1.4;\">\n                  Below you'll find your listing descriptions, SEO copy, and social captions.  \n                  Your full marketing PDF has also been attached to this email.\n                </p>\n              </td>\n            </tr>\n\n            <!-- Property Info -->\n            <tr>\n              <td style=\"padding:16px 24px;border-top:1px solid #f0f0f0;\">\n                <p style=\"margin:0;font-size:13px;color:#555;\">\n                  <strong style=\"color:#111827;\">📍 Address:</strong>\n                  {{ $('Aggregate1').item.json.data[0]['Address:'] }}\n                </p>\n                <p style=\"margin:8px 0 0;font-size:13px;color:#555;\">\n                  <strong style=\"color:#111827;\">🏡 Property Type:</strong>\n                  {{ $('Aggregate1').item.json.data[0]['Listing_Type:'] }}\n                </p>\n              </td>\n            </tr>\n\n            <!-- Main Description -->\n            <tr>\n              <td style=\"padding:16px 24px;\">\n                <h2 style=\"margin:0 0 8px;color:#111827;font-size:15px;font-weight:600;\">\n                  Listing Description\n                </h2>\n                <div style=\"background:#fafafa;border:1px solid #e5e7eb;padding:12px;border-radius:4px;font-size:13px;line-height:1.5;color:#222;\">\n                  {{ $('AI: Generate Multiple Description Styles').item.json.output }}\n                </div>\n              </td>\n            </tr>\n\n            <!-- Footer -->\n            <tr>\n              <td style=\"padding:16px 24px;border-top:1px solid #f0f0f0;font-size:12px;color:#6b7280;\">\n                <p style=\"margin:0 0 6px;\">\n                  Need changes? Reply to this email anytime and your AI assistant can revise it.\n                </p>\n                <p style=\"margin:0;\">\n                  <a href=\"mailto:{{ $json.agent_email || 'agent@example.com' }}?subject=Listing%20Edit%20Request\"\n                     style=\"color:#3b82f6;text-decoration:none;font-weight:500;\">\n                    Request Edits\n                  </a>\n                </p>\n              </td>\n            </tr>\n\n            <tr>\n              <td style=\"padding:12px 24px 18px;font-size:11px;color:#9ca3af;\">\n                Powered by your AI Listing Assistant.\n              </td>\n            </tr>\n\n          </table>\n\n        </td>\n      </tr>\n    </table>\n\n  </body>\n</html>\n",
+        "options": {
+          "appendAttribution": false,
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "property-listing-package.pdf"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -10496,
+        1712
+      ],
+      "id": "9446e61f-2214-4a4a-906a-5d43fc1f6cc7",
+      "name": "Email the Listing Package to the Agent",
+      "webhookId": "c9b39927-6183-4321-abca-a906d6e8f7d8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aKqfhqTiLcsBf0Z8",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $workflow.id }}",
+        "contextWindowLength": 1
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -12512,
+        1840
+      ],
+      "id": "33d75bfa-3e75-4b3d-aef3-8f606dad8936",
+      "name": "Simple Memory3"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "=gpt-4o-mini",
+          "mode": "id"
+        },
+        "imageUrls": "={{ $json.url }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2,
+      "position": [
+        -14528,
+        1392
+      ],
+      "id": "0cb0b3fe-63cf-42d9-9c96-2ae4596ec8a9",
+      "name": "Analyze image",
+      "retryOnFail": true,
+      "credentials": {
+        "openAiApi": {
+          "id": "iQ2kK9zdLRXoEg2W",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "type": "file",
+              "fileUrl": "={{ $json.url }}"
+            },
+            {
+              "content": "Whats in this Document? (Only Reply The Document Text)"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2,
+      "position": [
+        -14592,
+        1776
+      ],
+      "id": "9e55dcfb-0e2c-4bc4-935f-9632054b9ac4",
+      "name": "Message a model",
+      "retryOnFail": true,
+      "credentials": {
+        "openAiApi": {
+          "id": "iQ2kK9zdLRXoEg2W",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4fef2951-a0ae-451c-b9ac-5c64238a24f0",
+              "name": "Image Summary",
+              "value": "={{ $json['0'].content[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -14240,
+        1392
+      ],
+      "id": "d4277bfa-4679-4f6a-9785-ecb2ce6b8266",
+      "name": "Edit Fields3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "abb73ed5-ef04-45fe-a68e-5a1b0473fef0",
+              "name": "Document Summary",
+              "value": "={{ $json.output[0].content[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -14240,
+        1776
+      ],
+      "id": "f460e9e2-c952-464a-bc0f-155ff77d576f",
+      "name": "Edit Fields4"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze all provided property data and photos to generate a single, cohesive, professional real estate listing description suitable for direct pasting onto a property website.\n\nRequirements:\n\nWrite one continuous, well-structured description (multiple paragraphs are fine).\n\nIdentify and naturally incorporate the property’s architectural style.\n\nAssess and reflect the overall condition of the property on a 1–10 scale within the narrative (do not explicitly say “1–10”).\n\nHighlight all notable features visible in the photos and supported by the provided data (e.g., layout, finishes, natural light, outdoor spaces, parking, amenities).\n\nIncorporate relevant neighborhood and location advantages where appropriate.\n\nDo not invent features that are not visible or included in the data.\n\nMaintain a polished, engaging, and professional real estate tone.\n\nOutput ONLY the listing text — no headings, labels, summaries, bullet points, or explanations.\n\nProperty Data:\nAddress: {{ $json.data[0]['Address:'] }}\nLocation: {{ $json.data[0]['Location:'] }}\nNeighborhood: {{ $json.data[0]['Neighborhood/Area'] }}\nSQ Footing: {{ $json.data[0]['SQ.Footing:'] }}\nYear Built: {{ $json.data[0].Year_Built }}\nLot Size: {{ $json.data[0]['Lot_Size:'] }}\nHOA (If Any): {{ $json.data[0]['HOA (If Any)'] }}\nBedrooms: {{ $json.data[0]['Bedroom:'] }}\nBathrooms: {{ $json.data[0]['Bathrooms:'] }}\nParking Details: {{ $json.data[0]['Parking_Details:'] }}\nProperty Highlights: {{ $json.data[0].Property_Highlights }}\nNeighborhood Highlights: {{ $json.data[0].Neighborhood_Highlights }}\nListing Type: {{ $json.data[0]['Listing_Type:'] }}\nMonthly Rent (If Rent): {{ $json.data[0]['Monthly_Rent:'] }}\nSecurity Deposit (If Rent): {{ $json.data[0]['Security_Deposit:'] }}\nMinimum Lease Term (If Rent): {{ $json.data[0]['Minimum_Lease_Term:'] }}\nDemand (If Sale): {{ $json.data[0].Demand }}\nProperty Type: {{ $json.data[0].Property_Type }}",
+        "options": {
+          "systemMessage": "=Keep This Tone As Well:\n\nTarget Audience: {{ $json.data[0].Target_Audience }}\n\nPreferred Tone: {{ $json.data[0]['Preferred _Tone_For_AI_Description:'] }}\n\nNote For AI: {{ $json.data[0]['Note_For_AI:'] }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -13344,
+        1616
+      ],
+      "id": "6f835c71-abd4-40c7-a099-be899bdbc522",
+      "name": "Complete Description"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -12640,
+        1840
+      ],
+      "id": "befe3b86-caa7-4f05-a23d-59a506932215",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "bQyyeVUf9X79X9m6",
+          "name": "API Key 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = [];\nconst now = Date.now();\n\n// Simple function to generate a short unique string\nfunction generateUniqueId(length = 6) {\n    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';\n    let result = '';\n    for (let i = 0; i < length; i++) {\n        result += chars.charAt(Math.floor(Math.random() * chars.length));\n    }\n    return result;\n}\n\n// Get the first item from incoming Form Trigger\nconst item = $items()[0]; \nif (!item) return [];\n\n// Save all the JSON/text data in a separate property\nconst allInputData = { ...item.json };\n\n// Loop through all binary keys\nif (item.binary) {\n    for (const key of Object.keys(item.binary)) {\n        const bin = item.binary[key];\n        if (!bin || !bin.data) continue; // skip empty files\n\n        // Detect bucket\n        let bucket = \"Images\"; // default\n        const lowerKey = key.toLowerCase();\n\n        if (lowerKey.includes(\"floor\")) bucket = \"Floor_Plans\";\n        else if (lowerKey.includes(\"doc\") || lowerKey.includes(\"additional\")) bucket = \"Additional_Documents\";\n        else if (lowerKey.includes(\"video\") || (bin.mimeType && bin.mimeType.startsWith(\"video\"))) bucket = \"Videos\";\n\n        // Generate unique file name: original name + unique id + timestamp\n        const ext = bin.fileName?.split('.').pop() || 'bin';\n        const baseName = bin.fileName?.replace(/\\.[^/.]+$/, \"\") || key;\n        const uniqueId = generateUniqueId(6);\n        const fileName = `${baseName}_${uniqueId}_${now}.${ext}`;\n\n        const mimeType = bin.mimeType || \"application/octet-stream\";\n\n        // Push output keeping the original binary key, plus text input data\n        out.push({\n            json: { \n                bucket, \n                fileName, \n                mimeType, \n                originalKey: key,\n                allInputData // this keeps all the form/text input\n            },\n            binary: { [key]: bin } \n        });\n    }\n}\n\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -15712,
+        1472
+      ],
+      "id": "d05df4f5-af18-4f39-b1b4-3b7326145238",
+      "name": "Code in JavaScript5"
+    },
+    {
+      "parameters": {
+        "jsCode": "const projectRef = \"adfyaqvjhronondiyede\";\nconst out = [];\n\nfor (const item of $input.all()) {\n    const key = item.json.Key; \n    const lowerKey = key.toLowerCase();\n\n    const url = `https://${projectRef}.supabase.co/storage/v1/object/public/${key}`;\n\n    let category = \"unknown\";\n\n    if (lowerKey.endsWith(\".png\") ||\n        lowerKey.endsWith(\".jpg\") ||\n        lowerKey.endsWith(\".jpeg\") ||\n        lowerKey.endsWith(\".webp\") ||\n        lowerKey.includes(\"images/\")\n    ) {\n        category = \"images\";\n\n    } else if (lowerKey.endsWith(\".pdf\") ||\n               lowerKey.endsWith(\".docx\") ||\n               lowerKey.endsWith(\".doc\") ||\n               lowerKey.includes(\"additional_documents\")\n    ) {\n        category = \"documents\";\n\n    } else if (lowerKey.endsWith(\".mp4\") ||\n               lowerKey.endsWith(\".mov\") ||\n               lowerKey.endsWith(\".avi\") ||\n               lowerKey.endsWith(\".mkv\") ||\n               lowerKey.includes(\"videos/\")\n    ) {\n        category = \"videos\";\n\n    } else if (lowerKey.includes(\"floor_plans\")) {\n        category = \"floorPlans\";\n    }\n\n    out.push({\n        json: {\n            key,\n            url,\n            category\n        }\n    });\n}\n\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -15264,
+        1712
+      ],
+      "id": "6535f08c-8668-44ca-b6d9-bb8ab8a554df",
+      "name": "Code in JavaScript6"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "images",
+                    "operator": {
+                      "type": "string",
+                      "operation": "endsWith"
+                    },
+                    "id": "be2c2472-50d5-4a8a-b51f-858222622e5e"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "65e93603-63ba-44d9-9b45-35cb32e996f3",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "documents",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "efff39ca-e68f-4984-bc24-0eac7370fab6",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "videos",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -15040,
+        1696
+      ],
+      "id": "735d41da-2070-4466-a75c-e1a310565dbf",
+      "name": "Switch2"
+    },
+    {
+      "parameters": {
+        "resource": "document",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "documentUrls": "={{ $json.url }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        -14816,
+        1616
+      ],
+      "id": "29bb9523-1431-4dfc-a857-eab476051f41",
+      "name": "Analyze document1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "QHxzMHwF8XBljE0m",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6b3f7980-d571-430e-ba29-e1e06978cd27",
+              "name": "Image Summary",
+              "value": "={{ $json.content.parts[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -14240,
+        1200
+      ],
+      "id": "66158cc0-9b9f-4813-8b66-ee36b6d8aa3d",
+      "name": "Edit Fields5"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregator for image summaries\nconst imageSummaries = [];\n\n// Loop through all incoming items\nfor (const item of $input.all()) {\n    const summary = item.json[\"Image Summary\"]; // adapt the key if it's different\n    if (summary) {\n        imageSummaries.push(summary);\n    }\n}\n\n// Combine all summaries into one string\nconst combinedSummary = imageSummaries.join(\"\\n\\n---\\n\\n\"); // optional separator\n\nreturn [{\n    json: {\n        imageSummary: combinedSummary,\n        numberOfImages: imageSummaries.length\n    }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -14016,
+        1232
+      ],
+      "id": "e261e893-7201-4467-89d4-970c258b8014",
+      "name": "Code in JavaScript7"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregator for document summaries\nconst docSummaries = [];\n\nfor (const item of $input.all()) {\n    const summary = item.json[\"Document Summary\"]; // adjust key if different\n    if (summary) {\n        docSummaries.push(summary);\n    }\n}\n\nconst combinedDocSummary = docSummaries.join(\"\\n\\n---\\n\\n\");\n\nreturn [{\n    json: {\n        documentSummary: combinedDocSummary,\n        numberOfDocuments: docSummaries.length\n    }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -14016,
+        1616
+      ],
+      "id": "f373dbd5-6b98-4cee-a4ad-80d600d90cac",
+      "name": "Code in JavaScript8"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.0-flash-lite-001",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.0-flash-lite-001"
+        },
+        "imageUrls": "={{ $json.url }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        -14816,
+        1232
+      ],
+      "id": "57fb465d-fe9a-4883-8ce9-93530b608803",
+      "name": "Analyze an image1",
+      "retryOnFail": false,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "QHxzMHwF8XBljE0m",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "Property-Data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -15936,
+        1472
+      ],
+      "id": "e7a4da6e-7073-449a-ae16-87c49048ccbc",
+      "name": "Webhook2",
+      "webhookId": "adf7c2c6-f5bc-42ac-9afd-47789d0ea465"
+    },
+    {
+      "parameters": {
+        "content": "### Tenant Screening Flow\n",
+        "height": 1344,
+        "width": 6448,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -15984,
+        976
+      ],
+      "id": "a97ad07e-bc95-4812-a9d2-f5ee9e9deb5b",
+      "name": "Sticky Note2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Clean Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Text": {
+      "main": [
+        [
+          {
+            "node": "JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "File ID Generator": {
+      "main": [
+        [
+          {
+            "node": "Multiple Binary Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Multiple Binary Data": {
+      "main": [
+        [
+          {
+            "node": "Extract from PDF (RAW)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "PDF Stored In SupaBase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from PDF (RAW)": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SUMMARY": {
+      "main": [
+        [
+          {
+            "node": "Slack Message About Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JSON": {
+      "main": [
+        [
+          {
+            "node": "Confidence Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Monthly": {
+      "main": [
+        [
+          {
+            "node": "Weekly",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weekly": {
+      "main": [
+        [
+          {
+            "node": "Last Day",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confidence Score": {
+      "main": [
+        [
+          {
+            "node": "Confidence Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confidence Check": {
+      "main": [
+        [
+          {
+            "node": "One Way",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "MISSING FIELDS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MISSING FIELDS": {
+      "main": [
+        [
+          {
+            "node": "Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approval": {
+      "main": [
+        [
+          {
+            "node": "Yes Or No",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Yes Or No": {
+      "main": [
+        [
+          {
+            "node": "One Way",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slack Message About Missing Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Message About Missing Fields": {
+      "main": [
+        [
+          {
+            "node": "New JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New JSON": {
+      "main": [
+        [
+          {
+            "node": "One Way",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One Way": {
+      "main": [
+        [
+          {
+            "node": "Save Data In Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Data In Supabase": {
+      "main": [
+        [
+          {
+            "node": "SUMMARY",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Message About Summary": {
+      "main": [
+        [
+          {
+            "node": "Summary Saved",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "MAIL HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MAIL HTML": {
+      "main": [
+        [
+          {
+            "node": "Mail To Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mail To Agent": {
+      "main": [
+        [
+          {
+            "node": "Dates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dates": {
+      "main": [
+        [
+          {
+            "node": "Dates (Updated)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dates (Updated)": {
+      "main": [
+        [
+          {
+            "node": "Monthly",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Dates To Be Stored In SupaBase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dates To Be Stored In SupaBase": {
+      "main": [
+        [
+          {
+            "node": "Dates Info. In SupaBase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Data": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Get Data 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Data 2": {
+      "main": [
+        [
+          {
+            "node": "MAIL HTML 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MAIL HTML 2": {
+      "main": [
+        [
+          {
+            "node": "Warning Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Warning Mail": {
+      "main": [
+        [
+          {
+            "node": "SLACK ALERT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SLACK ALERT": {
+      "main": [
+        [
+          {
+            "node": "Slack Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "SUMMARY",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "MAIL HTML",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "JSON",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "MISSING FIELDS",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "New JSON",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "SUMMARY",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "MAIL HTML",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "JSON",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "MISSING FIELDS",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "New JSON",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini 2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "MAIL HTML 2",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "SLACK ALERT",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory 2": {
+      "ai_memory": [
+        [
+          {
+            "node": "MAIL HTML 2",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "SLACK ALERT",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "File ID Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "HTTP Request — Download ID Card": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "combined into a single text block": {
+      "main": [
+        [
+          {
+            "node": "Clean & Pre-Process Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tenant Screening AI Scoring Engine": {
+      "main": [
+        [
+          {
+            "node": "Json parsing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Tenant Screening AI Scoring Engine",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Tenant Data Extraction",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean & Pre-Process Text": {
+      "main": [
+        [
+          {
+            "node": "AI Tenant Data Extraction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Tenant Data Extraction": {
+      "main": [
+        [
+          {
+            "node": "Convert Json Object to String",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Json parsing": {
+      "main": [
+        [
+          {
+            "node": "Summarization Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Tenant Screening AI Scoring Engine",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Json Object to String": {
+      "main": [
+        [
+          {
+            "node": "Tenant Screening AI Scoring Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Tenant Screening data in Supabase": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a Email to Property Dealer/Admin/Business Owner": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarization Chain": {
+      "main": [
+        [
+          {
+            "node": "Insert Tenant Screening data in Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Summarization Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Rejection Email Content": {
+      "main": [
+        [
+          {
+            "node": "Send Rejection Email to Tenant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Rejection Email Content",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Generate Approval Email Content",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "Generate Rejection Email Content",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "Generate Approval Email Content",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Rejection Email to Tenant": {
+      "main": [
+        [
+          {
+            "node": "Notify Property Manager/Admin/Property Owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Property Manager/Admin/Property Owner": {
+      "main": [
+        [
+          {
+            "node": "Update Supabase (Save Rejection)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Supabase (Save Rejection)": {
+      "main": [
+        [
+          {
+            "node": "Log Decision into audit_logs table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Tenant Record": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Approval Email Content": {
+      "main": [
+        [
+          {
+            "node": "Send Approval Email to Tenant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Approval Email to Tenant": {
+      "main": [
+        [
+          {
+            "node": "Notify Property Manager/Admin/Property Owner1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Property Manager/Admin/Property Owner1": {
+      "main": [
+        [
+          {
+            "node": "Update Supabase (Save Approval)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Supabase (Save Approval)": {
+      "main": [
+        [
+          {
+            "node": "Log Decision into audit_logs table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request — Upload ID Card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request — Upload ID Card": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request — Download ID Card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Analyze an image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Analyze document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze an image": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "combined into a single text block",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        [
+          {
+            "node": "combined into a single text block",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Send a Email to Property Dealer/Admin/Business Owner",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update a row2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update a row1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a row2": {
+      "main": [
+        []
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Tenant Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Generate Rejection Email Content",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generate Approval Email Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze document": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript6",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Files Stored In Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Files Stored In Supabase": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze video": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "Complete Description",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript4": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "AI: Generate Multiple Description Styles": {
+      "main": [
+        [
+          {
+            "node": "AI: SEO Optimization",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI: SEO Optimization": {
+      "main": [
+        [
+          {
+            "node": "AI Market Comparison Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Market Comparison Text": {
+      "main": [
+        [
+          {
+            "node": "AI — Generate Email Templates for Prospects",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI — Generate Email Templates for Prospects": {
+      "main": [
+        [
+          {
+            "node": "Create Master Listing Package",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Master Listing Package": {
+      "main": [
+        [
+          {
+            "node": "Convert Package Into HTML/PDF-Ready Format",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Package Into HTML/PDF-Ready Format": {
+      "main": [
+        [
+          {
+            "node": "Remove the ```html\\n from previous node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove the ```html\\n from previous node": {
+      "main": [
+        [
+          {
+            "node": "Generate PDF Marketing Kit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate PDF Marketing Kit": {
+      "main": [
+        [
+          {
+            "node": "Save Property Package to Supabase",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Email the Listing Package to the Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory3": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI: Generate Multiple Description Styles",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "Complete Description",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "AI: SEO Optimization",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "AI Market Comparison Text",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "AI — Generate Email Templates for Prospects",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "Convert Package Into HTML/PDF-Ready Format",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze image": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields4": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Complete Description": {
+      "main": [
+        [
+          {
+            "node": "AI: Generate Multiple Description Styles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Complete Description",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "AI: Generate Multiple Description Styles",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "AI: SEO Optimization",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "AI Market Comparison Text",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "AI — Generate Email Templates for Prospects",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Convert Package Into HTML/PDF-Ready Format",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript5": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript6": {
+      "main": [
+        [
+          {
+            "node": "Switch2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch2": {
+      "main": [
+        [
+          {
+            "node": "Analyze an image1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Analyze document1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Analyze video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze document1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields5": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript7": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript8": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Analyze an image1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Analyze image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "99e9295a-1cfe-42a5-b56d-8d15060533a7",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "64d62ff8b412d40100ac5e53bfe35f98ec15d9a248e405071ff9001fe8e81542"
+  },
+  "id": "YDG0qhkwcNjafXd4",
+  "tags": []
+}
