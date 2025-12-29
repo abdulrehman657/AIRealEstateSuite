@@ -6,7 +6,7 @@ This Repo Contains The AI Real Estate Suite.
 > **An intelligent end-to-end real estate automation suite powered by AI, Supabase, and automated workflows.**  
 > Manage lease agreements, property listings, and tenant screening seamlessly — all in one unified AI-powered platform.
 
-Watch The Demo: (https://youtu.be/bfc1ZENjWyc)
+Watch The Demo: (https://youtu.be/scyeqw45qI4)
 
 ---
 
